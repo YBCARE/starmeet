@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 
 const BASE = 'Starmeet';
 const DEFAULT_DESC = 'Message your favourite celebrities directly. DM actors, musicians and athletes and get real replies.';
-const DEFAULT_IMG  = 'https://starmeet.app/og-image.jpg';
+const DEFAULT_IMG  = 'https://starmeet.online/og-image.jpg';
 
 export function useMeta({ title, description, image, url } = {}) {
   useEffect(() => {
