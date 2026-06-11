@@ -1,0 +1,980 @@
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Heart, MessageCircle, Share2, Bookmark, Check, Play, Send, X,
+         Volume2, VolumeX, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useCelebContext } from '../context/CelebContext';
+import { useAuth } from '../context/AuthContext';
+import { useFanPosts } from '../context/FanPostContext';
+import { getSomeFans } from '../services/fakeFans';
+import { useMeta } from '../hooks/useMeta';
+
+// ─── Priority celebrities shown first ────────────────────────────────────────
+const PRIORITY_NAMES = [
+  'Johnny Depp','Keanu Reeves','Will Smith','Tom Cruise',
+  'Morgan Freeman','Dwayne Johnson','Brad Pitt','Leonardo DiCaprio',
+  'Beyoncé','Taylor Swift','Cristiano Ronaldo','Jason Momoa',
+  'Can Yaman','Paul Wesley','Zendaya','Margot Robbie',
+];
+
+const VIDEO_DURATIONS = ['2:34','3:12','4:05','1:48','5:22','2:58','3:44','6:10','1:30','4:27'];
+
+// ─── Category-specific post captions ─────────────────────────────────────────
+const POSTS_BY_CATEGORY = {
+  Actor: [
+    "On set at 4am. This role is breaking me open in the best way possible. 🎬",
+    "Just finished the most emotionally demanding scene of my entire career. Wow.",
+    "Table read today. The script is unlike anything I've ever been handed. 👀",
+    "The costume department transformed me. I barely recognise myself. ✨",
+    "Wrapped principal photography. I'm going to miss this cast every single day. 🎬",
+    "Method acting means you bring the character home. My family noticed. 👁",
+    "The director pushed me further than I thought I could go today. Grateful.",
+    "Premiere night. All the nerves, all the joy, all the love in one room. 🌟",
+    "Award season. However it goes, this project means everything to me.",
+    "This character lives in me now. Some roles you never fully leave. 🖤",
+  ],
+  Actress: [
+    "On set at 4am. This role is breaking me open in the best way possible. 🎬",
+    "Just finished the most emotionally demanding scene of my entire career. Wow.",
+    "Table read today. The script is unlike anything I've ever been handed. 👀",
+    "The costume department transformed me. I barely recognise myself. ✨",
+    "Wrapped principal photography. I'm going to miss this cast every single day. 🎬",
+    "Method acting means you bring the character home. My family noticed. 👁",
+    "The director pushed me further than I thought I could go today. Grateful.",
+    "Premiere night. All the nerves, all the joy, all the love in one room. 🌟",
+    "Award season. However it goes, this project means everything to me.",
+    "This character lives in me now. Some roles you never fully leave. 🖤",
+  ],
+  Musician: [
+    "3am in the studio and we just made something that made us both cry. 🎵",
+    "New music is almost ready. I've been sitting on this for 8 months. Soon. 👀",
+    "Tour rehearsals. The production is insane this year. You are not ready. 🚀",
+    "Wrote today's track in 12 minutes. Sometimes songs just arrive fully formed. 🎶",
+    "This album has been the most vulnerable I've ever been. No safety nets.",
+    "Sold out night two. Every single one of you showed up. I can't breathe. 😭",
+    "Platinum. I'm sitting here crying and I don't care who sees it. ❤️",
+    "Live version hits different. Might release the concert recording. 🎤",
+    "Collaboration I never thought would happen is happening. Drop incoming. 🔥",
+    "Mixing the final track tonight. This journey took two years. Thank you. 🌙",
+  ],
+  Athlete: [
+    "5am. Ice bath. Film session. Repeat. Championship doesn't wait. 💪",
+    "Pre-game ritual. This one's for everyone who believed when I didn't. 🏆",
+    "365 consecutive training days. Nobody gives you what you don't take. ⚡",
+    "Post-game. Left everything on the field. That's all I know how to do. 🙏",
+    "Injury update: I'll be back earlier than they said. Book it. 💯",
+    "Draft day flashback hit me today. Look how far we've come. 🏅",
+    "Diet, sleep, discipline. No shortcuts. That's the whole secret. 🥗",
+    "Team first. Always has been. Always will be. 🤝",
+    "Personal record broken today. I wasn't even trying for it. 📈",
+    "The off-season isn't off. It's just preparation with less audience. 🔒",
+  ],
+  Director: [
+    "Day 47 of principal photography. Every single shot is a decision. 🎥",
+    "Watching the rough cut alone at midnight. Something special is here.",
+    "The hardest part of directing: knowing when to stop and trust your cast.",
+    "Sundance submission sent. Whatever happens, this film exists. That matters.",
+    "Casting is 80% of the work. The right actor changes everything. 🎬",
+    "Sound mix today. You forget how much emotion lives in the silence. 🔈",
+    "This script took 4 years. The film will take 2 more. Worth every minute.",
+    "Cannes. A decade ago I watched this festival from my bedroom floor. 🌴",
+    "Cut 40 minutes today. It hurt. It was right. Trust the edit.",
+    "My crew deserves every award. I'm just the one people photograph. 🏆",
+  ],
+  'Movie Producer': [
+    "Just greenlit something that's going to change the conversation. 🎬",
+    "Box office number just came in. I had to sit down for a minute. 📊",
+    "Assembling a cast that hasn't been in the same room before. Watch this.",
+    "Development is the invisible work nobody talks about. It's everything.",
+    "First-look deal signed. The next chapter starts now. 📝",
+    "Some projects take a decade to get made. This one was worth every rejection.",
+    "Screening tonight. Two years of work in two hours. Terrifying and beautiful.",
+    "The business is changing fast. We're changing with it. 🔄",
+    "Finding new voices is the most important thing I do. Full stop.",
+    "Wrap party. The crew made this. I just wrote the cheques. 🥂",
+  ],
+  Comedian: [
+    "Tried a new bit last night. The audience told me everything I needed to know.",
+    "Writing room at 2am. Comedy is just pain with better timing. 😂",
+    "Sold out three shows in 6 minutes. I actually screamed alone in my kitchen.",
+    "The best heckle I've had in a decade happened last Tuesday. I loved it.",
+    "New Netflix special is filmed. Now we wait. The waiting is the hardest part. 📺",
+    "Crowd work at its finest tonight. You cannot write what happened. 💀",
+    "My therapist says I'm processing. My audience says I'm hilarious. Balance.",
+    "Tour announcement coming this week. Start making plans. 🗺️",
+    "Comedy Central taping done. I left nothing on the stage and I mean nothing.",
+    "A joke took me 3 years to get right. Landed perfectly tonight. Worth it. 🎤",
+  ],
+  Model: [
+    "Paris Fashion Week. The show ran 45 minutes late and it was still perfect. 👗",
+    "Cover shoot today. 12 hours. Worth every second of it. 📸",
+    "Just closed the show. Walking back, the crowd felt like a wave. ✨",
+    "Behind the scenes on the campaign. The team made this something else entirely.",
+    "New editorial is out. I've never felt more myself in front of a camera.",
+    "Vogue. Honestly still can't say it without feeling something. 🙏",
+    "The fashion industry is changing and I'm here for every bit of it. 🌍",
+    "Off-duty. Sometimes this face needs a day with no one looking at it. 😌",
+    "Design collaboration dropping next month. This one is personal. 🖤",
+    "10 years in this industry. The girl who showed up to her first casting has no idea.",
+  ],
+  Creator: [
+    "We just hit 10 million. I'm genuinely shaking. Thank you. Every single one of you. 😭",
+    "New video goes live Sunday. Worked on this one for 6 weeks. 🎥",
+    "Collaboration with someone I've watched for years just went live. Go watch it.",
+    "Comments section tonight restored my faith in people. Legitimately. ❤️",
+    "Behind the camera it's just me, a ring light, and a promise to show up. 🔆",
+    "Brands keep calling. I keep choosing the ones that won't embarrass you. 🤝",
+    "The algorithm buried this video. 2 million of you found it anyway. 🙌",
+    "New series starts this Friday. Different from everything I've done before.",
+    "I almost quit last year. I'm so glad I didn't. Thank you for staying. 🌱",
+    "Editing at midnight because daytime me is somehow worse at it. 🌙",
+  ],
+};
+
+const DEFAULT_POSTS = [
+  "Grateful for every single one of you. This journey means everything ❤️",
+  "Behind the scenes today. This is where the real magic happens ✨",
+  "The grind never stops. Every day is an opportunity to grow 🙏",
+  "Can't believe how far we've come together. Thank you all so much 🌟",
+  "First look. No caption needed. Just feel it 🖤",
+  "Raw, unfiltered, real. This is me 😤",
+  "The best is yet to come. Believe that 🙌",
+  "To everyone who said it couldn't be done — here we are 🏆",
+  "Silence before the storm. Trust the process 🌊",
+  "Hard work in silence, let success make the noise. Always 💎",
+];
+
+// Story captions per category
+const STORY_CAPTIONS = {
+  Actor:    ["On set today 🎬", "Character prep 🎭", "Award season ✨", "Filming in progress", "Behind the scenes 🎥"],
+  Actress:  ["On set today 🎬", "Character prep 🎭", "Award season ✨", "Filming in progress", "Behind the scenes 🎥"],
+  Musician: ["Studio session 🎵", "Tour life 🎤", "New music coming 👀", "Backstage vibes 🎶", "Recording day 🎧"],
+  Athlete:  ["Game day 🏆", "Training session 💪", "Pre-game rituals ⚡", "Post-match 🙏", "Champions train harder"],
+  Director: ["On set 🎥", "Reviewing rushes", "Casting sessions 🎬", "Edit suite 🖥️", "Production day"],
+  Comedian: ["Tour life 😂", "Writing session 📝", "Stage time tonight 🎤", "New material loading", "Club set done 🔥"],
+  Model:    ["Photoshoot day 📸", "Fashion week 👗", "On the runway ✨", "New campaign 💫", "Editorial day"],
+  Creator:  ["Filming day 🎥", "Behind the video 📱", "New video out Sunday", "Collab dropping soon 🤝", "Studio time 💡"],
+  default:  ["New post ✨", "Behind the scenes", "Update coming soon", "Live moments", "Today's vibe"],
+};
+
+// ─── Multilingual comment pool ────────────────────────────────────────────────
+const COMMENTS = [
+  'GOAT 🐐🔥','Legend 👑','Love you so much!!','Iconic forever','W post','Unreal talent',
+  'This is everything 😭','Always the best','No one does it like you','Absolute legend',
+  'You literally changed my life, I can\'t explain how much your work means to me 😭❤️',
+  'Been a fan for 10 years and you never once disappointed. Thank you for existing.',
+  'I was going through the hardest time of my life and your work saved me. Facts.',
+  'My daughter cried watching this. She wants to be just like you when she grows up 🙏',
+  'OMG I CANNOT BELIEVE THIS!!! I\'M SCREAMING 😱😱😱',
+  'Wait WHAT?? I was not ready for this at ALL 💀',
+  'The way I dropped everything to like and comment IMMEDIATELY 😭',
+  'I\'ve watched this 47 times already and it gets better EVERY TIME',
+  'Okay but can we just appreciate how consistently incredible this person is?? Every single thing they do is better than the last. The dedication, the craft, the passion — unmatched. Genuinely unmatched.',
+  'I remember watching your very first project and thinking "this person is going to be the biggest star in the world" and look at you now. So proud even though you don\'t know I exist 😂❤️',
+  'Eres increíble!! Te amo muchísimo 😭❤️','Dios mío qué talento tan grande 🔥',
+  'El mejor de todos los tiempos sin duda 👑','Nunca me canso de verte trabajar ✨',
+  'Tu es incroyable !! Je t\'adore 🔥','Légende absolue 👑 personne ne te dépasse',
+  'Mon artiste préféré depuis toujours ❤️',
+  'Você é incrível demais!! Te amo muito 😭','Meu ídolo de todos os tempos 👑🔥',
+  'أنت أسطورة حقيقية 🔥👑','أحبك كثيراً يا بطل ❤️','الأفضل على الإطلاق بلا منافس',
+  '🔥🔥🔥🔥🔥','❤️❤️❤️','👑👑👑','😭😭😭💀','✨✨✨🌟','💯💯💯',
+  'Not me crying at 2am watching this AGAIN 💀❤️',
+  'The algorithm knew I needed this today fr fr 🙏',
+  'I showed this to my mum and now she\'s a fan too 😂❤️',
+  'Rent free in my head FOREVER and I am not complaining',
+  'The way this made me feel things I can\'t even describe 😭✨',
+  'Already sent this to my entire contact list no cap 📲',
+  'Living breathing proof that excellence is a standard not a goal 👑',
+];
+
+// Celeb self-replies — pinned at top of comments on their own post
+const CELEB_SELF_COMMENTS = [
+  "Thank you all so much. Truly ❤️",
+  "The love in the comments right now 😭 you all keep me going",
+  "This means more than you know 🙏",
+  "Reading every comment. Every. Single. One. 💙",
+  "Made this for you. Thank you for receiving it like this ✨",
+  "Your support is the reason I keep going. Always. 🌟",
+  "Cannot believe the response. I'm overwhelmed in the best way 😭",
+  "THANK YOU. I don't have better words right now. THANK YOU 🔥",
+  "Pinning this moment forever in my mind 🖤",
+  "You guys are insane. I love you all so much 🫶",
+];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function seeded(seed) {
+  let s = seed >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function ri(min, max, rng) { return min + Math.floor(rng() * (max - min + 1)); }
+function fmtNum(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
+const TIMES = ['1m','3m','7m','14m','22m','35m','1h','2h','4h','7h','12h','1d','2d','3d','5d'];
+
+function getPostText(celeb, rng) {
+  const cat   = celeb?.category || '';
+  const pool  = POSTS_BY_CATEGORY[cat] || DEFAULT_POSTS;
+  return pick(pool, rng);
+}
+
+function generatePost(celebrities, absIdx, priorityFirst) {
+  let celeb;
+  if (priorityFirst && absIdx < priorityFirst.length) {
+    celeb = priorityFirst[absIdx];
+  } else {
+    const offset = priorityFirst ? priorityFirst.length : 0;
+    celeb = celebrities[(absIdx - offset) % celebrities.length];
+  }
+
+  const rng      = seeded(absIdx * 7919 + (celeb?.id?.toString?.().charCodeAt?.(0) || absIdx));
+  const isVideo  = (absIdx % 6 === 5);
+  const videoDur = isVideo ? VIDEO_DURATIONS[absIdx % VIDEO_DURATIONS.length] : null;
+  const likes    = ri(10_000, 2_000_000, rng);
+  const commCnt  = ri(300, 8000, rng);
+
+  const fakeFanList = getSomeFans(Math.min(commCnt, 50), absIdx * 13);
+
+  // Pinned celeb self-comment always first
+  const selfCrng   = seeded(absIdx * 999 + 1);
+  const selfComment = {
+    id:      `${absIdx}_celeb`,
+    user:    celeb?.name || 'Celebrity',
+    avatar:  celeb?.image,
+    text:    pick(CELEB_SELF_COMMENTS, selfCrng),
+    time:    pick(['1m','3m','5m','7m','10m'], selfCrng),
+    isOwner: true,
+  };
+
+  const comments = [selfComment, ...Array.from({ length: Math.min(commCnt - 1, 49) }, (_, i) => {
+    const crng = seeded(absIdx * 1337 + i * 97);
+    const fan  = fakeFanList[i % fakeFanList.length];
+    return {
+      id:     `${absIdx}_c${i}`,
+      user:   fan.username,
+      avatar: fan.avatar,
+      text:   pick(COMMENTS, crng),
+      time:   pick(TIMES, crng),
+      isOwner: false,
+    };
+  })];
+
+  // ~1 in 5 posts is "exclusive" (Pro only) — seeded so it's consistent
+  const exclusiveRng = seeded(absIdx * 12347 + 9999);
+  const isExclusive  = exclusiveRng() < 0.18 && absIdx > 2; // skip first few posts
+
+  return {
+    id:      `post_${absIdx}`,
+    absIdx,
+    celeb,
+    isVideo,
+    videoDur,
+    text:    getPostText(celeb, rng),
+    image:   celeb?.image || `https://picsum.photos/seed/p${absIdx}/600/520`,
+    likes,
+    commCnt,
+    comments,
+    time:    pick(TIMES, rng),
+    showComments: false,
+    isExclusive,
+  };
+}
+
+function genBatch(celebrities, start, count, priorityFirst) {
+  if (!celebrities.length) return [];
+  return Array.from({ length: count }, (_, i) => generatePost(celebrities, start + i, priorityFirst));
+}
+
+// ─── Story Viewer ─────────────────────────────────────────────────────────────
+function StoryViewer({ stories, startIndex, onClose }) {
+  const [idx,      setIdx]      = useState(startIndex);
+  const [progress, setProgress] = useState(0);
+  const timerRef = useRef(null);
+  const DURATION = 5000;
+
+  const current = stories[idx];
+  const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=111&color=aaa&size=400`;
+  const cat     = current?.category || 'default';
+  const captions = STORY_CAPTIONS[cat] || STORY_CAPTIONS.default;
+  const caption  = captions[idx % captions.length];
+
+  useEffect(() => {
+    setProgress(0);
+    clearInterval(timerRef.current);
+    const start = Date.now();
+    timerRef.current = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const pct = Math.min((elapsed / DURATION) * 100, 100);
+      setProgress(pct);
+      if (pct >= 100) {
+        clearInterval(timerRef.current);
+        if (idx < stories.length - 1) setIdx(i => i + 1);
+        else onClose();
+      }
+    }, 50);
+    return () => clearInterval(timerRef.current);
+  }, [idx]);
+
+  function prev() { if (idx > 0) setIdx(i => i - 1); }
+  function next() { if (idx < stories.length - 1) setIdx(i => i + 1); else onClose(); }
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'#000', zIndex:3000, display:'flex', flexDirection:'column' }}
+      onClick={e => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        e.clientX < rect.width / 2 ? prev() : next();
+      }}>
+
+      {/* Progress bars */}
+      <div style={{ display:'flex', gap:3, padding:'12px 12px 0', flexShrink:0, zIndex:10 }}>
+        {stories.map((_, i) => (
+          <div key={i} style={{ flex:1, height:2.5, borderRadius:3, background:'rgba(255,255,255,0.25)', overflow:'hidden' }}>
+            <div style={{
+              height:'100%', borderRadius:3, background:'#fff',
+              width: i < idx ? '100%' : i === idx ? `${progress}%` : '0%',
+              transition: i === idx ? 'none' : 'none',
+            }} />
+          </div>
+        ))}
+      </div>
+
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', zIndex:10, flexShrink:0 }}>
+        <div style={{ width:38, height:38, borderRadius:'50%', overflow:'hidden', border:'2px solid #fff', flexShrink:0 }}>
+          <img src={current?.image || av(current?.name)} alt=""
+            style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top' }}
+            onError={e=>{e.currentTarget.src=av(current?.name)}} />
+        </div>
+        <div style={{ flex:1 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{current?.name}</span>
+            <div style={{ width:14, height:14, borderRadius:'50%', background:'#3b82f6', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <Check size={7} strokeWidth={3.5} color="white" />
+            </div>
+          </div>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,0.6)' }}>Just now</div>
+        </div>
+        <button onClick={e=>{e.stopPropagation(); onClose();}}
+          style={{ background:'none', border:'none', color:'#fff', cursor:'pointer', lineHeight:0, padding:8 }}>
+          <X size={22} />
+        </button>
+      </div>
+
+      {/* Story image — full screen portrait */}
+      <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
+        <img src={current?.image || av(current?.name)} alt=""
+          style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top center', display:'block' }}
+          onError={e=>{e.currentTarget.src=av(current?.name)}} />
+        {/* Vignette */}
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7) 100%)' }} />
+
+        {/* Caption overlay */}
+        <div style={{ position:'absolute', bottom:80, left:0, right:0, padding:'0 20px', textAlign:'center' }}>
+          <div style={{ display:'inline-block', background:'rgba(0,0,0,0.55)', backdropFilter:'blur(8px)', borderRadius:12, padding:'8px 18px', maxWidth:280 }}>
+            <span style={{ fontSize:15, color:'#fff', fontWeight:600 }}>{caption}</span>
+          </div>
+        </div>
+
+        {/* Navigation arrows — visible on desktop */}
+        {idx > 0 && (
+          <button onClick={e=>{e.stopPropagation(); prev();}}
+            style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', background:'rgba(255,255,255,0.15)', backdropFilter:'blur(4px)', border:'none', borderRadius:'50%', width:38, height:38, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <ChevronLeft size={20} color="#fff" />
+          </button>
+        )}
+        {idx < stories.length - 1 && (
+          <button onClick={e=>{e.stopPropagation(); next();}}
+            style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'rgba(255,255,255,0.15)', backdropFilter:'blur(4px)', border:'none', borderRadius:'50%', width:38, height:38, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <ChevronRight size={20} color="#fff" />
+          </button>
+        )}
+      </div>
+
+      {/* Bottom send bar */}
+      <div style={{ padding:'12px 16px 20px', flexShrink:0, display:'flex', gap:10, alignItems:'center' }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ flex:1, background:'rgba(255,255,255,0.1)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:999, padding:'10px 16px', fontSize:13, color:'rgba(255,255,255,0.7)' }}>
+          Reply to {current?.name?.split(' ')[0]}...
+        </div>
+        <button style={{ background:'none', border:'none', cursor:'pointer', padding:6, color:'#fff' }}>❤️</button>
+        <button style={{ background:'none', border:'none', cursor:'pointer', padding:6 }}>
+          <Share2 size={22} color="#fff" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Stories Row ─────────────────────────────────────────────────────────────
+function StoriesRow({ celebrities }) {
+  const stories  = useMemo(() => celebrities.slice(0, 80), [celebrities]);
+  const [viewing, setViewing] = useState(null); // index into stories
+  const [seen,    setSeen]    = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sm_stories_seen')) || {}; } catch { return {}; }
+  });
+  const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=111&color=aaa&size=120`;
+
+  function openStory(idx) {
+    setSeen(s => {
+      const next = { ...s, [idx]: true };
+      try { localStorage.setItem('sm_stories_seen', JSON.stringify(next)); } catch {}
+      return next;
+    });
+    setViewing(idx);
+  }
+
+  return (
+    <>
+      <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:16, padding:'14px 0', marginBottom:16 }}>
+        <div style={{ display:'flex', gap:14, overflowX:'auto', padding:'0 14px', scrollbarWidth:'none' }}>
+          {stories.map((c, i) => (
+            <div key={c.id} onClick={() => openStory(i)}
+              style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:6, cursor:'pointer' }}>
+              <div style={{
+                width:58, height:58, borderRadius:'50%', padding:2,
+                background: seen[i]
+                  ? 'linear-gradient(135deg,#333,#444)'
+                  : 'linear-gradient(135deg,#3b82f6,#8b5cf6,#ec4899)',
+              }}>
+                <div style={{ width:'100%', height:'100%', borderRadius:'50%', overflow:'hidden', border:'2px solid #0a0a0a' }}>
+                  <img src={c.image} alt={c.name}
+                    style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top' }}
+                    onError={e => { e.currentTarget.src = av(c.name); }} />
+                </div>
+              </div>
+              <span style={{ fontSize:10, color: seen[i] ? '#444' : '#888', whiteSpace:'nowrap', maxWidth:62, overflow:'hidden', textOverflow:'ellipsis' }}>
+                {c.name.split(' ')[0]}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {viewing !== null && (
+        <StoryViewer
+          stories={stories}
+          startIndex={viewing}
+          onClose={() => setViewing(null)}
+        />
+      )}
+    </>
+  );
+}
+
+// ─── Video Player overlay ─────────────────────────────────────────────────────
+function VideoPlayer({ post, onClose }) {
+  const [playing,  setPlaying]  = useState(true);
+  const [muted,    setMuted]    = useState(false);
+  const [scrubber, setScrubber] = useState(22); // fake position %
+  const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=111&color=aaa&size=200`;
+
+  // Fake scrubber advance
+  useEffect(() => {
+    if (!playing) return;
+    const t = setInterval(() => setScrubber(s => s >= 99 ? 0 : s + 0.3), 200);
+    return () => clearInterval(t);
+  }, [playing]);
+
+  const [totMins, totSecs] = post.videoDur ? post.videoDur.split(':').map(Number) : [3, 0];
+  const totalSec = totMins * 60 + totSecs;
+  const currentSec = Math.floor((scrubber / 100) * totalSec);
+  const fmt = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'#000', zIndex:3000, display:'flex', flexDirection:'column' }}
+      onClick={onClose}>
+
+      {/* Top bar */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'14px 16px', flexShrink:0, zIndex:10 }}
+        onClick={e=>e.stopPropagation()}>
+        <button onClick={onClose} style={{ background:'rgba(255,255,255,0.1)', border:'none', borderRadius:'50%', width:36, height:36, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <X size={18} color="#fff" />
+        </button>
+        <img src={post.celeb?.image || av(post.celeb?.name)} alt=""
+          style={{ width:34, height:34, borderRadius:'50%', objectFit:'cover', objectPosition:'top' }}
+          onError={e=>{e.currentTarget.src=av(post.celeb?.name)}} />
+        <div>
+          <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{post.celeb?.name}</div>
+          <div style={{ fontSize:11, color:'#aaa' }}>{post.celeb?.category}</div>
+        </div>
+      </div>
+
+      {/* Photo as video frame */}
+      <div style={{ flex:1, position:'relative', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' }}
+        onClick={e=>{e.stopPropagation(); setPlaying(p=>!p);}}>
+        <img src={post.image} alt=""
+          style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain' }}
+          onError={e=>{e.currentTarget.src=av(post.celeb?.name)}} />
+        {/* Pause overlay */}
+        {!playing && (
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.3)' }}>
+            <div style={{ width:70, height:70, borderRadius:'50%', background:'rgba(255,255,255,0.15)', backdropFilter:'blur(8px)', border:'2px solid rgba(255,255,255,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <Play size={30} fill="white" color="white" style={{ marginLeft:4 }} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Controls */}
+      <div style={{ padding:'16px 16px 28px', flexShrink:0 }} onClick={e=>e.stopPropagation()}>
+        {/* Caption */}
+        <p style={{ fontSize:13, color:'#ccc', lineHeight:1.6, margin:'0 0 14px' }}>{post.text}</p>
+
+        {/* Scrubber */}
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
+          <span style={{ fontSize:11, color:'#aaa', minWidth:30 }}>{fmt(currentSec)}</span>
+          <div style={{ flex:1, height:3, background:'#333', borderRadius:3, cursor:'pointer', position:'relative' }}
+            onClick={e=>{
+              const rect = e.currentTarget.getBoundingClientRect();
+              setScrubber(((e.clientX-rect.left)/rect.width)*100);
+            }}>
+            <div style={{ height:'100%', width:`${scrubber}%`, background:'#fff', borderRadius:3 }} />
+            <div style={{ position:'absolute', top:'50%', left:`${scrubber}%`, transform:'translate(-50%,-50%)', width:12, height:12, borderRadius:'50%', background:'#fff' }} />
+          </div>
+          <span style={{ fontSize:11, color:'#aaa', minWidth:30, textAlign:'right' }}>{post.videoDur}</span>
+        </div>
+
+        {/* Buttons */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <button onClick={()=>setPlaying(p=>!p)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:8, color:'#fff' }}>
+            {playing
+              ? <Pause size={26} fill="white" color="white" />
+              : <Play  size={26} fill="white" color="white" />}
+          </button>
+          <div style={{ display:'flex', alignItems:'center', gap:20 }}>
+            <span style={{ fontSize:13, color:'#aaa' }}>❤️ {fmtNum(post.likes)}</span>
+            <span style={{ fontSize:13, color:'#aaa' }}>💬 {fmtNum(post.commCnt)}</span>
+            <button onClick={()=>setMuted(m=>!m)} style={{ background:'none', border:'none', cursor:'pointer' }}>
+              {muted ? <VolumeX size={20} color="#666" /> : <Volume2 size={20} color="#aaa" />}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Post Card ────────────────────────────────────────────────────────────────
+function PostCard({ post, onLike, onToggleComments, onAddComment, liked, saved, onToggleSave, userAvatar, userName, onExpandVideo, isPro }) {
+  const navigate = useNavigate();
+  const c   = post.celeb;
+  const [commentText, setCommentText] = useState('');
+  const [likeAnim,    setLikeAnim]    = useState(false);
+  const av  = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=111&color=aaa&size=200`;
+
+  function submitComment(e) {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+    onAddComment(post.id, commentText);
+    setCommentText('');
+  }
+
+  function handleLike() {
+    setLikeAnim(true);
+    setTimeout(() => setLikeAnim(false), 400);
+    onLike(post.id);
+  }
+
+  const isHot   = post.likes > 1_200_000;
+  const isViral = post.likes > 1_700_000;
+
+  return (
+    <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:16, overflow:'hidden', marginBottom:14 }}>
+
+      {/* Viral/hot badge */}
+      {isViral && (
+        <div style={{ background:'linear-gradient(90deg,#7c3aed,#ec4899)', padding:'5px 14px', display:'flex', alignItems:'center', gap:6 }}>
+          <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>🔥 Going viral · {fmtNum(post.likes)} likes</span>
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px' }}>
+        <div onClick={() => navigate(`/celebrity/${c.id}`)} style={{ textDecoration:'none', flexShrink:0, position:'relative', cursor:'pointer' }}>
+          <img src={c.image} alt={c.name}
+            style={{ width:42, height:42, borderRadius:'50%', objectFit:'cover', objectPosition:'top', display:'block' }}
+            onError={e => { e.currentTarget.src = av(c.name); }} />
+          <div style={{ position:'absolute', bottom:0, right:0, width:15, height:15, borderRadius:'50%', background:'#3b82f6', border:'2px solid #0a0a0a', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <Check size={7} strokeWidth={3} color="white" />
+          </div>
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div onClick={() => navigate(`/celebrity/${c.id}`)} style={{ cursor:'pointer' }}>
+            <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{c.name}</div>
+          </div>
+          <div style={{ fontSize:11, color:'#555', marginTop:1 }}>{c.category} · {post.time} ago</div>
+        </div>
+        <Link to={`/messages?with=celeb_${c.id}`} style={{
+          background:'none', border:'1.5px solid #333', borderRadius:999,
+          color:'#ccc', fontSize:12, fontWeight:600, padding:'4px 14px',
+          cursor:'pointer', fontFamily:'inherit', textDecoration:'none',
+          display:'inline-flex', alignItems:'center', gap:5,
+        }}>
+          <MessageCircle size={12} /> DM
+        </Link>
+      </div>
+
+      {/* Caption */}
+      <div style={{ padding:'0 14px 10px', fontSize:14, color:'#ddd', lineHeight:1.6 }}>{post.text}</div>
+
+      {/* Media */}
+      {post.isVideo ? (
+        <div style={{ position:'relative', cursor:'pointer' }} onClick={() => onExpandVideo(post)}>
+          <img src={post.image} alt={c.name}
+            style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover', objectPosition:'top center', display:'block' }}
+            onError={e => { e.currentTarget.style.objectPosition='center'; }} />
+          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.22)' }} />
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <div style={{ width:64, height:64, borderRadius:'50%', background:'rgba(255,255,255,0.18)', backdropFilter:'blur(8px)', border:'2px solid rgba(255,255,255,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <Play size={28} fill="white" color="white" style={{ marginLeft:4 }} />
+            </div>
+          </div>
+          <div style={{ position:'absolute', bottom:8, right:10, background:'rgba(0,0,0,0.75)', borderRadius:4, padding:'2px 7px', fontSize:12, fontWeight:700, color:'#fff', letterSpacing:'0.5px' }}>
+            {post.videoDur}
+          </div>
+          <div style={{ position:'absolute', top:8, left:10, background:'rgba(0,0,0,0.65)', borderRadius:4, padding:'2px 7px', fontSize:11, color:'#fff', display:'flex', alignItems:'center', gap:4 }}>
+            <Play size={10} fill="white" color="white" /> Video
+          </div>
+        </div>
+      ) : (
+        <div style={{ background:'#111', position:'relative' }}>
+          <img src={post.image} alt=""
+            style={{ width:'100%', aspectRatio:'5/4', objectFit:'cover', display:'block', filter: post.isExclusive && !isPro ? 'blur(18px) brightness(0.5)' : 'none', transition:'filter 0.3s' }}
+            loading="lazy"
+            onError={e => { e.currentTarget.style.display='none'; }} />
+          {/* Exclusive overlay for non-Pro users */}
+          {post.isExclusive && !isPro && (
+            <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10 }}>
+              <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(124,58,237,0.9)', display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(4px)' }}>
+                <span style={{ fontSize:24 }}>🔒</span>
+              </div>
+              <div style={{ textAlign:'center', padding:'0 24px' }}>
+                <div style={{ fontSize:14, fontWeight:800, color:'#fff', marginBottom:4 }}>Pro Exclusive</div>
+                <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)', marginBottom:12, lineHeight:1.4 }}>
+                  Upgrade to see this post from {c.name?.split(' ')[0]}
+                </div>
+                <Link to="/profile" style={{ display:'inline-block', padding:'8px 20px', background:'#7c3aed', color:'#fff', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none' }}>
+                  Upgrade to Pro — $9/mo
+                </Link>
+              </div>
+            </div>
+          )}
+          {/* Exclusive badge for Pro users */}
+          {post.isExclusive && isPro && (
+            <div style={{ position:'absolute', top:8, left:8, background:'linear-gradient(90deg,#7c3aed,#3b82f6)', borderRadius:999, padding:'3px 10px', display:'flex', alignItems:'center', gap:4 }}>
+              <span style={{ fontSize:10, fontWeight:700, color:'#fff' }}>⭐ Exclusive</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ padding:'10px 14px', display:'flex', alignItems:'center', gap:18, borderBottom:'1px solid #0d0d0d' }}>
+        <button onClick={handleLike} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:5, padding:0, color: liked ? '#e05252' : '#666', fontFamily:'inherit' }}>
+          <Heart size={21} fill={liked ? '#e05252' : 'none'} color={liked ? '#e05252' : '#666'}
+            style={{ transition:'transform 0.2s', transform: likeAnim ? 'scale(1.45)' : 'scale(1)' }} />
+          <span style={{ fontSize:13, fontWeight:600 }}>{fmtNum(liked ? post.likes + 1 : post.likes)}</span>
+        </button>
+
+        <button onClick={() => onToggleComments(post.id)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:5, padding:0, color:'#666', fontFamily:'inherit' }}>
+          <MessageCircle size={21} color={post.showComments ? '#3b82f6' : '#666'} />
+          <span style={{ fontSize:13, fontWeight:600 }}>{fmtNum(post.commCnt)}</span>
+        </button>
+
+        <button style={{ background:'none', border:'none', cursor:'pointer', padding:0 }}>
+          <Share2 size={21} color="#666" />
+        </button>
+
+        <button onClick={() => onToggleSave(post.id)} style={{ background:'none', border:'none', cursor:'pointer', padding:0, marginLeft:'auto' }}>
+          <Bookmark size={21} fill={saved ? '#3b82f6' : 'none'} color={saved ? '#3b82f6' : '#666'} />
+        </button>
+      </div>
+
+      {/* Comments panel */}
+      {post.showComments && (
+        <>
+          <div style={{ maxHeight:360, overflowY:'auto', padding:'6px 14px 8px' }}>
+            {post.comments.map(cm => (
+              <div key={cm.id} style={{ display:'flex', gap:8, padding:'8px 0', borderBottom:'1px solid #0a0a0a' }}>
+                <div style={{ position:'relative', flexShrink:0 }}>
+                  <img src={cm.isOwner ? (cm.avatar || av(cm.user)) : (cm.avatar || av(cm.user))} alt={cm.user}
+                    style={{ width:30, height:30, borderRadius:'50%', objectFit:'cover', objectPosition:'top' }}
+                    onError={e => { e.currentTarget.src = av(cm.user); }} />
+                  {cm.isOwner && (
+                    <div style={{ position:'absolute', bottom:0, right:0, width:12, height:12, borderRadius:'50%', background:'#3b82f6', border:'2px solid #0a0a0a', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <Check size={6} strokeWidth={3.5} color="white" />
+                    </div>
+                  )}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', gap:7, alignItems:'center', flexWrap:'wrap' }}>
+                    <span style={{ fontSize:12, fontWeight:700, color: cm.isOwner ? '#fff' : '#aaa' }}>{cm.user}</span>
+                    {cm.isOwner && <span style={{ fontSize:10, background:'#1e3a5f', border:'1px solid #2a4f8a', borderRadius:4, padding:'1px 6px', color:'#60a5fa' }}>Author</span>}
+                    <span style={{ fontSize:10, color:'#444' }}>{cm.time} ago</span>
+                  </div>
+                  <div style={{ fontSize:13, color: cm.isOwner ? '#ddd' : '#bbb', marginTop:3, lineHeight:1.5 }}>{cm.text}</div>
+                </div>
+              </div>
+            ))}
+            {post.commCnt > 50 && (
+              <div style={{ textAlign:'center', padding:'10px 0', color:'#444', fontSize:12 }}>+{fmtNum(post.commCnt - 50)} more comments</div>
+            )}
+          </div>
+
+          <form onSubmit={submitComment} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px 12px', borderTop:'1px solid #0d0d0d' }}>
+            <img src={userAvatar || av(userName || 'Fan')} alt=""
+              style={{ width:28, height:28, borderRadius:'50%', flexShrink:0, objectFit:'cover' }} />
+            <input
+              value={commentText}
+              onChange={e => setCommentText(e.target.value)}
+              placeholder="Add a comment..."
+              style={{ flex:1, background:'#111', border:'1px solid #1a1a1a', borderRadius:999, padding:'7px 14px', fontSize:13, color:'#fff', outline:'none', fontFamily:'inherit' }}
+            />
+            <button type="submit" style={{ background:'none', border:'none', cursor:'pointer', padding:0, color: commentText ? '#3b82f6' : '#333' }}>
+              <Send size={18} />
+            </button>
+          </form>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Fan Post Card ────────────────────────────────────────────────────────────
+function FanPostCard({ post, onLike, liked }) {
+  const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n||'F')}&background=1a1a1a&color=aaa&size=100`;
+  return (
+    <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:16, overflow:'hidden', marginBottom:14 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px' }}>
+        <Link to="/profile" style={{ textDecoration:'none', flexShrink:0 }}>
+          <img src={post.userAvatar || av(post.userName)} alt=""
+            style={{ width:40, height:40, borderRadius:'50%', objectFit:'cover' }} />
+        </Link>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{post.userName || post.username}</div>
+          <div style={{ fontSize:11, color:'#555' }}>Fan · {new Date(post.createdAt).toLocaleDateString()}</div>
+        </div>
+        <span style={{ fontSize:10, background:'#1a1a1a', border:'1px solid #222', borderRadius:4, padding:'2px 7px', color:'#666' }}>Fan Post</span>
+      </div>
+      {post.caption && <div style={{ padding:'0 14px 10px', fontSize:14, color:'#bbb', lineHeight:1.55 }}>{post.caption}</div>}
+      {post.media && <img src={post.media} alt="" style={{ width:'100%', aspectRatio:'4/3', objectFit:'cover', display:'block' }} />}
+      {post.taggedCelebs?.length > 0 && (
+        <div style={{ padding:'8px 14px 0', fontSize:12, color:'#3b82f6' }}>with {post.taggedCelebs.join(', ')}</div>
+      )}
+      <div style={{ padding:'10px 14px', display:'flex', gap:16, alignItems:'center' }}>
+        <button onClick={() => onLike(post.id)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:5, padding:0, color: liked ? '#e05252' : '#666', fontFamily:'inherit' }}>
+          <Heart size={20} fill={liked ? '#e05252' : 'none'} color={liked ? '#e05252' : '#666'} />
+          <span style={{ fontSize:13, fontWeight:600 }}>{fmtNum(post.likes || 0)}</span>
+        </button>
+        <button style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:5, padding:0, color:'#666', fontFamily:'inherit' }}>
+          <MessageCircle size={20} color="#666" />
+        </button>
+        <button style={{ background:'none', border:'none', cursor:'pointer', padding:0 }}><Share2 size={20} color="#666" /></button>
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// MAIN FEED
+// ═════════════════════════════════════════════════════════════════════════════
+const INITIAL = 20;
+const BATCH   = 15;
+const MAX_DOM = 80;
+
+export default function Feed() {
+  useMeta({ title: 'Your Feed', description: 'See the latest posts from your favourite celebrities. Like, comment, and DM them directly on Starmeet.' });
+  const { celebrities }   = useCelebContext();
+  const { isLiked, toggleLike, addComment, user, isSaved, toggleSave, celebFollows, isPro } = useAuth();
+  const { getRecentPosts } = useFanPosts();
+
+  const [posts,      setPosts]      = useState([]);
+  const [nextIdx,    setNextIdx]    = useState(0);
+  const [loading,    setLoading]    = useState(false);
+  const [expandedVid,setExpandedVid] = useState(null);
+  const [feedTab,    setFeedTab]    = useState('foryou'); // 'foryou' | 'following'
+  const sentinelRef = useRef(null);
+  const celebsRef   = useRef(celebrities);
+  const priorityRef = useRef(null);
+  celebsRef.current = celebrities;
+
+  const priorityCelebs = useMemo(() => {
+    if (!celebrities.length) return [];
+    const result = [];
+    for (const name of PRIORITY_NAMES) {
+      const found = celebrities.find(c => c.name.toLowerCase().includes(name.toLowerCase()));
+      if (found && !result.find(r => r.id === found.id)) result.push(found);
+    }
+    return result;
+  }, [celebrities]);
+
+  useEffect(() => {
+    if (!celebrities.length || posts.length > 0) return;
+    priorityRef.current = priorityCelebs;
+    const startOffset = Math.floor(Math.random() * Math.max(1, celebrities.length - INITIAL));
+    const initial     = genBatch(celebrities, 0, INITIAL, priorityCelebs);
+    const extras      = genBatch(celebrities, PRIORITY_NAMES.length + startOffset, INITIAL, priorityCelebs);
+    const merged      = [...initial.slice(0, priorityCelebs.length + 3), ...extras];
+    setPosts(merged.slice(0, INITIAL));
+    setNextIdx(PRIORITY_NAMES.length + startOffset + INITIAL);
+  }, [celebrities, priorityCelebs]);
+
+  const loadMore = useCallback(() => {
+    const celebs = celebsRef.current;
+    if (!celebs.length || loading) return;
+    setLoading(true);
+    setTimeout(() => {
+      setNextIdx(idx => {
+        const batch = genBatch(celebs, idx, BATCH, priorityRef.current);
+        setPosts(prev => {
+          const combined = [...prev, ...batch];
+          return combined.length > MAX_DOM ? combined.slice(combined.length - MAX_DOM) : combined;
+        });
+        return idx + BATCH;
+      });
+      setLoading(false);
+    }, 700);
+  }, [loading]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting) loadMore(); },
+      { rootMargin: '500px' }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loadMore]);
+
+  function handleToggleComments(postId) {
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, showComments: !p.showComments } : p));
+  }
+
+  const fanPosts = useMemo(() => getRecentPosts(20), [getRecentPosts]);
+
+  // Posts from celebrities the user follows (for "Following" tab)
+  const followingPosts = useMemo(() => {
+    if (!celebFollows.length || !posts.length) return [];
+    return posts.filter(p => p.celeb && celebFollows.includes(p.celeb.id));
+  }, [posts, celebFollows]);
+
+  return (
+    <div style={{ background:'#000', minHeight:'100vh', color:'#fff', fontFamily:'Inter,system-ui,sans-serif' }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <div style={{ maxWidth:620, margin:'0 auto', padding:'16px 14px 60px' }}>
+
+        {/* For You / Following tabs */}
+        <div style={{ display:'flex', gap:0, marginBottom:16, background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:4 }}>
+          {[['foryou','For You'],['following','Following']].map(([tab, label]) => (
+            <button key={tab} onClick={() => setFeedTab(tab)} style={{
+              flex:1, padding:'8px 0', borderRadius:9, border:'none', cursor:'pointer', fontFamily:'inherit',
+              fontSize:13, fontWeight:700, transition:'all 0.15s',
+              background: feedTab === tab ? '#fff' : 'transparent',
+              color:      feedTab === tab ? '#000' : '#555',
+            }}>{label}</button>
+          ))}
+        </div>
+
+        <StoriesRow celebrities={celebrities} />
+
+        {/* ── Following tab empty state ─────────────────────────────────────── */}
+        {feedTab === 'following' && celebFollows.length === 0 && (
+          <div style={{ textAlign:'center', padding:'56px 24px' }}>
+            <div style={{ fontSize:44, marginBottom:16 }}>⭐</div>
+            <div style={{ fontSize:18, fontWeight:700, color:'#fff', marginBottom:10 }}>Follow your first star</div>
+            <div style={{ fontSize:14, color:'#555', lineHeight:1.6, marginBottom:24 }}>
+              Posts from celebrities you follow will appear here.<br />Discover who to follow on Explore.
+            </div>
+            <Link to="/explore" style={{ display:'inline-block', padding:'12px 28px', background:'#3b82f6', color:'#fff', borderRadius:10, fontWeight:700, fontSize:14, textDecoration:'none' }}>
+              Discover Stars →
+            </Link>
+          </div>
+        )}
+
+        {/* ── Following tab: posts from followed celebs ─────────────────────── */}
+        {feedTab === 'following' && celebFollows.length > 0 && followingPosts.length === 0 && (
+          <div style={{ textAlign:'center', padding:'40px 24px', color:'#555' }}>
+            <div style={{ fontSize:32, marginBottom:10 }}>📭</div>
+            <div style={{ fontSize:14, color:'#666', lineHeight:1.6 }}>Loading posts from the stars you follow…</div>
+          </div>
+        )}
+
+        {feedTab === 'following' && followingPosts.length > 0 && (
+          followingPosts.map(post => (
+            <PostCard
+              key={post.id} post={post}
+              onLike={toggleLike}
+              onToggleComments={handleToggleComments}
+              onAddComment={addComment}
+              liked={isLiked(post.id)}
+              saved={isSaved ? isSaved(post.id) : false}
+              onToggleSave={toggleSave || (() => {})}
+              userAvatar={user?.avatar}
+              userName={user?.name}
+              onExpandVideo={setExpandedVid}
+              isPro={isPro}
+            />
+          ))
+        )}
+
+        {/* ── For You tab ───────────────────────────────────────────────────── */}
+        {feedTab === 'foryou' && (posts.length === 0 ? (
+          [...Array(4)].map((_, i) => (
+            <div key={i} style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:16, overflow:'hidden', marginBottom:14 }}>
+              <div style={{ padding:14, display:'flex', gap:10, alignItems:'center' }}>
+                <div style={{ width:42, height:42, borderRadius:'50%', background:'#1a1a1a' }} />
+                <div>
+                  <div style={{ width:110, height:11, background:'#1a1a1a', borderRadius:5, marginBottom:6 }} />
+                  <div style={{ width:70,  height:9,  background:'#141414', borderRadius:5 }} />
+                </div>
+              </div>
+              <div style={{ width:'100%', aspectRatio:'5/4', background:'#111' }} />
+            </div>
+          ))
+        ) : (() => {
+          const mixed = [];
+          let fi = 0;
+          posts.forEach((post, i) => {
+            mixed.push(post);
+            if ((i + 1) % 4 === 0 && fi < fanPosts.length) {
+              mixed.push({ ...fanPosts[fi++], isFanPost: true });
+            }
+          });
+          return mixed.map(post => post.isFanPost ? (
+            <FanPostCard key={post.id} post={post} onLike={toggleLike} liked={isLiked(post.id)} />
+          ) : (
+            <PostCard
+              key={post.id} post={post}
+              onLike={toggleLike}
+              onToggleComments={handleToggleComments}
+              onAddComment={addComment}
+              liked={isLiked(post.id)}
+              saved={isSaved ? isSaved(post.id) : false}
+              onToggleSave={toggleSave || (() => {})}
+              userAvatar={user?.avatar}
+              userName={user?.name}
+              onExpandVideo={setExpandedVid}
+              isPro={isPro}
+            />
+          ));
+        })())}
+
+        <div ref={sentinelRef} style={{ height:10 }} />
+
+        {loading && (
+          <div style={{ textAlign:'center', padding:'18px 0 40px', color:'#555', fontSize:13, fontWeight:500, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+            <div style={{ width:16, height:16, border:'2px solid #222', borderTopColor:'#3b82f6', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+            Loading more stars...
+          </div>
+        )}
+      </div>
+
+      {expandedVid && (
+        <VideoPlayer post={expandedVid} onClose={() => setExpandedVid(null)} />
+      )}
+    </div>
+  );
+}

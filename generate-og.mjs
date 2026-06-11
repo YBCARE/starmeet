@@ -1,0 +1,107 @@
+/**
+ * Generates public/og-image.jpg for Starmeet
+ * Run: node generate-og.mjs
+ */
+import { writeFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// 1200 × 630 SVG — black bg, purple/blue gradient headline
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#000000"/>
+      <stop offset="100%" style="stop-color:#060612"/>
+    </linearGradient>
+    <linearGradient id="glow" cx="50%" cy="30%" r="50%" fx="50%" fy="30%" id="glow" gradientUnits="userSpaceOnUse" x1="300" y1="0" x2="900" y2="400">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:0.18"/>
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:0"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#a78bfa"/>
+      <stop offset="100%" style="stop-color:#60a5fa"/>
+    </linearGradient>
+    <filter id="blur1">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Glow blob -->
+  <ellipse cx="600" cy="200" rx="500" ry="280" fill="#7c3aed" opacity="0.10" filter="url(#blur1)"/>
+  <ellipse cx="750" cy="350" rx="350" ry="200" fill="#3b82f6" opacity="0.08" filter="url(#blur1)"/>
+
+  <!-- Grid lines (subtle) -->
+  <line x1="0" y1="315" x2="1200" y2="315" stroke="#ffffff" stroke-opacity="0.02" stroke-width="1"/>
+  <line x1="600" y1="0" x2="600" y2="630" stroke="#ffffff" stroke-opacity="0.02" stroke-width="1"/>
+
+  <!-- Top badge -->
+  <rect x="460" y="130" width="280" height="34" rx="17" fill="#0d0d0d" stroke="#1f1f1f" stroke-width="1"/>
+  <circle cx="483" cy="147" r="5" fill="#22c55e"/>
+  <text x="500" y="152" font-family="Inter,Arial,sans-serif" font-size="13" font-weight="600" fill="#888">1,300+ celebrities active now</text>
+
+  <!-- Main headline line 1 -->
+  <text x="600" y="230" font-family="Inter,Arial,sans-serif" font-size="80" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="-3">Your message.</text>
+
+  <!-- Main headline line 2 — gradient -->
+  <text x="600" y="325" font-family="Inter,Arial,sans-serif" font-size="80" font-weight="900" fill="url(#textGrad)" text-anchor="middle" letter-spacing="-3">Their reply.</text>
+
+  <!-- Subheadline -->
+  <text x="600" y="395" font-family="Inter,Arial,sans-serif" font-size="22" fill="#666666" text-anchor="middle">DM your favourite celebrity and actually get a real reply back.</text>
+
+  <!-- Social proof row -->
+  <!-- Avatar circles -->
+  <circle cx="481" cy="460" r="16" fill="#1e1b4b" stroke="#000" stroke-width="2"/>
+  <text x="481" y="465" font-family="Arial" font-size="11" font-weight="700" fill="#818cf8" text-anchor="middle">K</text>
+  <circle cx="497" cy="460" r="16" fill="#1a2e1a" stroke="#000" stroke-width="2"/>
+  <text x="497" y="465" font-family="Arial" font-size="11" font-weight="700" fill="#4ade80" text-anchor="middle">A</text>
+  <circle cx="513" cy="460" r="16" fill="#2e1a1a" stroke="#000" stroke-width="2"/>
+  <text x="513" y="465" font-family="Arial" font-size="11" font-weight="700" fill="#f87171" text-anchor="middle">M</text>
+  <circle cx="529" cy="460" r="16" fill="#1a1a2e" stroke="#000" stroke-width="2"/>
+  <text x="529" y="465" font-family="Arial" font-size="11" font-weight="700" fill="#60a5fa" text-anchor="middle">J</text>
+  <circle cx="545" cy="460" r="16" fill="#2e2a1a" stroke="#000" stroke-width="2"/>
+  <text x="545" y="465" font-family="Arial" font-size="11" font-weight="700" fill="#fbbf24" text-anchor="middle">R</text>
+
+  <text x="575" y="465" font-family="Inter,Arial,sans-serif" font-size="15" fill="#555555">
+    <tspan font-weight="700" fill="#aaaaaa">500,000+</tspan> fans already connected
+  </text>
+
+  <!-- Bottom CTA pill -->
+  <rect x="468" y="504" width="264" height="46" rx="23" fill="#ffffff"/>
+  <text x="600" y="533" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="800" fill="#000000" text-anchor="middle">Start for free →</text>
+
+  <!-- Branding -->
+  <text x="600" y="600" font-family="Inter,Arial,sans-serif" font-size="15" font-weight="700" fill="#333333" text-anchor="middle" letter-spacing="0.5">starmeet.app</text>
+</svg>`;
+
+// Write SVG first
+const svgPath = resolve(__dirname, 'public/og-image.svg');
+writeFileSync(svgPath, svg, 'utf8');
+console.log('✅ SVG written to public/og-image.svg');
+
+// Try to convert to JPG with sharp
+try {
+  const { default: sharp } = await import('sharp');
+  const jpgPath = resolve(__dirname, 'public/og-image.jpg');
+  await sharp(Buffer.from(svg))
+    .resize(1200, 630)
+    .jpeg({ quality: 92 })
+    .toFile(jpgPath);
+  console.log('✅ JPG written to public/og-image.jpg');
+} catch (e) {
+  // Sharp not available — install it
+  console.log('⚠️  sharp not found. Installing...');
+  const { execSync } = await import('child_process');
+  execSync('npm install sharp --save-dev', { stdio: 'inherit', cwd: __dirname });
+  const { default: sharp } = await import('sharp');
+  const jpgPath = resolve(__dirname, 'public/og-image.jpg');
+  await sharp(Buffer.from(svg))
+    .resize(1200, 630)
+    .jpeg({ quality: 92 })
+    .toFile(jpgPath);
+  console.log('✅ JPG written to public/og-image.jpg');
+}
