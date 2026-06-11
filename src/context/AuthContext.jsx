@@ -7,6 +7,7 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile as fbUpdateProfile,
+  sendEmailVerification,
 } from 'firebase/auth';
 import {
   doc, setDoc, getDoc, updateDoc, collection,
@@ -158,11 +159,17 @@ export function AuthProvider({ children }) {
       avatarUrl = await uploadAvatar(fbUser.uid, avatar);
     }
 
-    // ── Step 4: update Firebase Auth display name ─────────────────────────
+    // ── Step 4: update Firebase Auth display name + send verification email ──
     try {
       await fbUpdateProfile(fbUser, { displayName: name || username, photoURL: '' });
     } catch (e) {
       console.warn('[Starmeet] updateProfile warning (non-fatal):', e.message);
+    }
+    try {
+      await sendEmailVerification(fbUser);
+      console.log('[Starmeet] ✅ Verification email sent to:', email);
+    } catch (e) {
+      console.warn('[Starmeet] Verification email failed (non-fatal):', e.message);
     }
 
     // ── Step 5: build profile object ──────────────────────────────────────

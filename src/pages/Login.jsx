@@ -17,8 +17,9 @@ export default function Login() {
 
   const initMode  = location.pathname === '/signup' ? 'signup' : 'login';
   const [mode, setMode]         = useState(initMode);
-  const [showPass, setShowPass] = useState(false);
-  const [error, setError]       = useState('');
+  const [showPass, setShowPass]           = useState(false);
+  const [error, setError]                 = useState('');
+  const [verifyNotice, setVerifyNotice]   = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const fileRef = useRef(null);
 
@@ -63,7 +64,10 @@ export default function Login() {
           name: form.name || form.username, bio: form.bio, dob: form.dob, avatar: form.avatar,
         });
         if (res?.error) { setError(res.error); return; }
-        navigate('/onboarding', { replace: true });
+        setError('');
+        // Show email verification notice before redirecting
+        setVerifyNotice(true);
+        setTimeout(() => navigate('/onboarding', { replace: true }), 4000);
       }
     } finally {
       setSubmitting(false);
@@ -126,6 +130,13 @@ export default function Login() {
           <span style={{ fontSize:11, color:'#444' }}>or</span>
           <div style={{ flex:1, height:1, background:'#1a1a1a' }} />
         </div>
+
+        {/* Verification notice */}
+        {verifyNotice && (
+          <div style={{ background:'rgba(34,197,94,0.1)', border:'1px solid rgba(34,197,94,0.3)', borderRadius:8, padding:'12px 14px', marginBottom:12, fontSize:13, color:'#22c55e', lineHeight:1.5 }}>
+            ✅ Account created! We sent a verification email to <strong>{form.email}</strong>. Please check your inbox and click the link to verify your account.
+          </div>
+        )}
 
         {/* Error */}
         {error && (
