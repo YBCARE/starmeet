@@ -1,12 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ArrowRight, Check, Star, Zap, Shield, MessageCircle, Play, ChevronRight } from 'lucide-react';
+import {
+  Search, ArrowRight, Check, Star, Zap, Shield, MessageCircle, ChevronRight,
+} from 'lucide-react';
 import { useCelebContext } from '../context/CelebContext';
 import { celebrities as STATIC_CELEBS } from '../data/celebrities';
+import { celebPath } from '../utils/celebrity';
 import Navbar from '../components/Navbar';
+import './Landing.css';
 
-// ─── Category config — images pulled from real celebrity data ─────────────────
-// Each entry maps to a celebrity in the app by category match
 const CATEGORY_DEFS = [
   { label: 'Actors',          match: 'Actress'       },
   { label: 'Musicians',       match: 'Musician'      },
@@ -19,7 +21,6 @@ const CATEGORY_DEFS = [
 ];
 
 function buildCategories(celebList) {
-  // Use all available celebs (static + any added via admin)
   const all = celebList?.length ? celebList : STATIC_CELEBS;
   return CATEGORY_DEFS.map(def => {
     const celeb = all.find(c =>
@@ -35,7 +36,6 @@ function buildCategories(celebList) {
   });
 }
 
-// ─── Animated chat demo ───────────────────────────────────────────────────────
 const DEMO_CONVO = [
   { from: 'fan',   text: "You're literally the reason I started acting. This is unreal 😭" },
   { from: 'celeb', text: "That genuinely means everything to me. Keep going. 🙏", delay: 1200 },
@@ -59,7 +59,6 @@ function ChatDemo({ celebName, celebImg }) {
     return () => clearTimeout(t);
   }, [visible]);
 
-  // Restart loop
   useEffect(() => {
     if (visible === DEMO_CONVO.length) {
       const t = setTimeout(() => setVisible(0), 3000);
@@ -70,138 +69,85 @@ function ChatDemo({ celebName, celebImg }) {
   const av = name => `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1a1a2e&color=818cf8&size=100&bold=true`;
 
   return (
-    <div style={{
-      background: '#0a0a0a', border: '1px solid #1f1f1f', borderRadius: 20,
-      overflow: 'hidden', width: '100%', maxWidth: 380, boxShadow: '0 40px 80px rgba(0,0,0,0.6)',
-    }}>
-      {/* Chat header */}
-      <div style={{ padding: '14px 16px', borderBottom: '1px solid #141414', display: 'flex', alignItems: 'center', gap: 10, background: '#050505' }}>
-        <div style={{ position: 'relative' }}>
-          <img src={celebImg || av(celebName)} alt={celebName}
-            style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top' }}
-            onError={e => { e.currentTarget.src = av(celebName); }} />
-          <div style={{ position: 'absolute', bottom: 0, right: 0, width: 11, height: 11, borderRadius: '50%', background: '#22c55e', border: '2px solid #050505' }} />
-        </div>
+    <div className="landing-chat">
+      <div className="landing-chat-head">
+        <img src={celebImg || av(celebName)} alt={celebName}
+          onError={e => { e.currentTarget.src = av(celebName); }} />
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{celebName}</span>
-            <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Check size={7} strokeWidth={3.5} color="white" />
-            </div>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>{celebName}</span>
+            <span className="landing-verified"><Check size={7} strokeWidth={3.5} color="white" /></span>
           </div>
-          <div style={{ fontSize: 11, color: '#22c55e' }}>Online now</div>
+          <div className="landing-chat-online">Online now</div>
         </div>
-        <div style={{ marginLeft: 'auto', background: '#7c3aed22', border: '1px solid #7c3aed44', borderRadius: 999, padding: '3px 10px' }}>
-          <span style={{ fontSize: 11, color: '#a78bfa', fontWeight: 600 }}>Pro Member</span>
-        </div>
+        <span className="landing-chat-pro">Pro Member</span>
       </div>
 
-      {/* Messages */}
-      <div style={{ padding: '16px 14px', minHeight: 200, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {DEMO_CONVO.slice(0, visible).map((msg, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: msg.from === 'fan' ? 'flex-end' : 'flex-start', animation: 'fadeUp 0.3s ease' }}>
-            {msg.from === 'celeb' && (
-              <img src={celebImg || av(celebName)} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0, marginRight: 6, alignSelf: 'flex-end' }}
+      <div className="landing-chat-body">
+        {DEMO_CONVO.slice(0, visible).map((msg, i) =>
+          msg.from === 'fan' ? (
+            <div key={i} className={`landing-bubble landing-bubble-${msg.from}`}>{msg.text}</div>
+          ) : (
+            <div key={i} className="landing-chat-row">
+              <img src={celebImg || av(celebName)} alt=""
                 onError={e => { e.currentTarget.src = av(celebName); }} />
-            )}
-            <div style={{
-              maxWidth: '72%', padding: '9px 13px', borderRadius: msg.from === 'fan' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-              background: msg.from === 'fan' ? '#3b82f6' : '#1a1a1a',
-              fontSize: 13, color: '#fff', lineHeight: 1.5,
-            }}>{msg.text}</div>
-          </div>
-        ))}
-
+              <div className={`landing-bubble landing-bubble-${msg.from}`}>{msg.text}</div>
+            </div>
+          )
+        )}
         {typing && (
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, animation: 'fadeUp 0.3s ease' }}>
-            <img src={celebImg || av(celebName)} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }}
+          <div className="landing-chat-row">
+            <img src={celebImg || av(celebName)} alt=""
               onError={e => { e.currentTarget.src = av(celebName); }} />
-            <div style={{ background: '#1a1a1a', borderRadius: '16px 16px 16px 4px', padding: '10px 14px', display: 'flex', gap: 4, alignItems: 'center' }}>
-              {[0,1,2].map(i => (
-                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#555', animation: `bounce 1.2s ${i*0.2}s ease-in-out infinite` }} />
+            <div className="landing-bubble landing-bubble-celeb" style={{ display: 'flex', gap: 4, padding: '12px 16px' }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{
+                  width: 6, height: 6, borderRadius: '50%', background: '#555',
+                  animation: `bounce 1.2s ${i * 0.2}s ease-in-out infinite`,
+                }} />
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* Input bar */}
-      <div style={{ padding: '10px 14px', borderTop: '1px solid #111', display: 'flex', gap: 8, alignItems: 'center' }}>
-        <div style={{ flex: 1, background: '#111', borderRadius: 999, padding: '9px 14px', fontSize: 13, color: '#555' }}>
-          Message {celebName}...
-        </div>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <ArrowRight size={15} color="white" />
-        </div>
+      <div className="landing-chat-foot">
+        <div className="landing-chat-input">Message {celebName}...</div>
+        <div className="landing-chat-send"><ArrowRight size={16} color="white" /></div>
       </div>
     </div>
   );
 }
 
-// ─── Stat counter ──────────────────────────────────────────────────────────────
-function Stat({ value, label }) {
+function PricingCard({ name, price, sub, features, cta, ctaLink, featured, badge }) {
   return (
-    <div style={{ textAlign: 'center', padding: '0 24px' }}>
-      <div style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 13, color: '#555', marginTop: 4 }}>{label}</div>
-    </div>
-  );
-}
-
-// ─── Pricing card ─────────────────────────────────────────────────────────────
-function PricingCard({ name, price, sub, features, cta, ctaLink, highlight, badge }) {
-  return (
-    <div style={{
-      flex: 1, minWidth: 240, maxWidth: 320,
-      background: highlight ? 'linear-gradient(135deg, #1e1b4b, #0f172a)' : '#0a0a0a',
-      border: `1.5px solid ${highlight ? '#7c3aed' : '#1a1a1a'}`,
-      borderRadius: 20, padding: '28px 24px',
-      position: 'relative', overflow: 'hidden',
-      boxShadow: highlight ? '0 0 60px rgba(124,58,237,0.15)' : 'none',
-    }}>
-      {badge && (
-        <div style={{ position: 'absolute', top: 16, right: 16, background: '#7c3aed', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999 }}>
-          {badge}
-        </div>
-      )}
-      <div style={{ fontSize: 13, fontWeight: 700, color: highlight ? '#a78bfa' : '#555', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{name}</div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
-        <span style={{ fontSize: 38, fontWeight: 900, color: '#fff', letterSpacing: '-2px' }}>{price}</span>
-        {sub && <span style={{ fontSize: 13, color: '#555' }}>{sub}</span>}
+    <div className={`landing-price-card${featured ? ' featured' : ''}`}>
+      {badge && <span className="landing-price-badge">{badge}</span>}
+      <div className="landing-price-tier">{name}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+        <span className="landing-price-amount">{price}</span>
+        {sub && <span className="landing-price-sub">{sub}</span>}
       </div>
-      <div style={{ height: 1, background: '#1a1a1a', margin: '20px 0' }} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginBottom: 24 }}>
+      <div className="landing-price-divider" />
+      <ul className="landing-price-features">
         {features.map((f, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, fontSize: 13, color: f.dim ? '#444' : '#bbb', lineHeight: 1.4 }}>
-            <Check size={14} color={f.dim ? '#333' : (highlight ? '#a78bfa' : '#3b82f6')} style={{ flexShrink: 0, marginTop: 1 }} />
+          <li key={i} className={f.dim ? 'dim' : ''}>
+            <Check size={14} color={f.dim ? '#444' : (featured ? '#a78bfa' : 'var(--sm-accent)')} style={{ flexShrink: 0, marginTop: 2 }} />
             {f.text}
-          </div>
+          </li>
         ))}
-      </div>
-      <Link to={ctaLink} style={{
-        display: 'block', textAlign: 'center', textDecoration: 'none',
-        background: highlight ? '#7c3aed' : '#1a1a1a',
-        color: '#fff', fontWeight: 700, fontSize: 14,
-        padding: '12px', borderRadius: 12,
-        border: highlight ? 'none' : '1px solid #2a2a2a',
-        transition: 'opacity 0.15s',
-      }}>
-        {cta}
-      </Link>
+      </ul>
+      <Link to={ctaLink} className="landing-price-cta">{cta}</Link>
     </div>
   );
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// MAIN
-// ═════════════════════════════════════════════════════════════════════════════
 export default function Landing() {
-  const { celebrities }        = useCelebContext();
-  const navigate               = useNavigate();
-  const [query,    setQuery]   = useState('');
-  const categories = buildCategories(celebrities);
+  const { celebrities } = useCelebContext();
+  const navigate        = useNavigate();
+  const [query, setQuery] = useState('');
+  const categories      = buildCategories(celebrities);
 
-  // Pick a high-profile celebrity for the chat demo
   const demoCell = celebrities.find(c =>
     c.name?.toLowerCase().includes('dwayne') ||
     c.name?.toLowerCase().includes('keanu') ||
@@ -218,366 +164,232 @@ export default function Landing() {
   const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=111&color=555&size=300`;
 
   return (
-    <div style={{ background: '#000', minHeight: '100vh', color: '#fff', fontFamily: 'Inter,system-ui,sans-serif' }}>
-      <style>{`
-        @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes bounce { 0%,80%,100% { transform:translateY(0); } 40% { transform:translateY(-5px); } }
-        @keyframes shimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
-        @keyframes floatY { 0%,100% { transform:translateY(0px); } 50% { transform:translateY(-10px); } }
-        .cta-primary:hover { opacity:0.88; }
-        .cta-ghost:hover { border-color:#555 !important; }
-        .celeb-card:hover { transform:translateY(-3px); }
-        .celeb-card { transition: transform 0.2s; }
-      `}</style>
-
+    <div className="landing">
       <Navbar />
 
-      {/* ══════════════════════════════════════════
-          HERO
-      ══════════════════════════════════════════ */}
-      <section style={{ padding: 'clamp(40px,6vw,80px) 16px clamp(48px,6vw,80px)', position: 'relative', overflow: 'hidden' }}>
-
-        {/* Background glow */}
-        <div style={{ position: 'absolute', top: '-20%', left: '50%', transform: 'translateX(-50%)', width: 700, height: 400, background: 'radial-gradient(ellipse, rgba(124,58,237,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 48, flexWrap: 'wrap', justifyContent: 'center' }}>
-
-          {/* Left — copy */}
-          <div style={{ flex: '1 1 420px', maxWidth: 520 }}>
-
-            {/* Trust badge */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: 999, padding: '6px 14px', marginBottom: 24 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s ease-in-out infinite' }} />
-              <span style={{ fontSize: 12, color: '#aaa', fontWeight: 500 }}>1,300+ celebrities active now</span>
+      {/* Hero */}
+      <section className="landing-hero">
+        <div className="landing-hero-grid" aria-hidden="true" />
+        <div className="landing-hero-inner">
+          <div>
+            <div className="landing-badge">
+              <span className="landing-badge-dot" />
+              1,300+ celebrities active now
             </div>
 
-            <h1 style={{
-              fontSize: 'clamp(36px,5.5vw,58px)', fontWeight: 900,
-              lineHeight: 1.08, margin: '0 0 20px', letterSpacing: '-2px',
-            }}>
+            <h1>
               Your message.{' '}
-              <span style={{ background: 'linear-gradient(135deg, #7c3aed, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                Their reply.
-              </span>
-              <br />No PR. No bots.
+              <span className="landing-hero-accent">Their reply.</span>
+              <br />
+              No PR. No bots.
             </h1>
 
-            <p style={{ color: '#888', fontSize: 'clamp(15px,2vw,17px)', lineHeight: 1.65, margin: '0 0 32px', maxWidth: 460 }}>
+            <p className="landing-hero-lead">
               DM the actor, athlete or musician you actually care about — and get a real reply back.
-              Over <strong style={{ color: '#ccc' }}>500,000 fans</strong> have already had the conversation they thought was impossible.
+              Over <strong style={{ color: 'var(--sm-text)' }}>500,000 fans</strong> have already had the conversation they thought was impossible.
             </p>
 
-            {/* Search */}
-            <form onSubmit={handleSearch} style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              background: '#0d0d0d', border: '1.5px solid #1f1f1f',
-              borderRadius: 14, padding: '10px 14px', marginBottom: 20,
-              transition: 'border-color 0.2s',
-            }}
-              onFocus={e => e.currentTarget.style.borderColor = '#3b82f6'}
-              onBlur={e => e.currentTarget.style.borderColor = '#1f1f1f'}
-            >
-              <Search size={16} color="#555" style={{ flexShrink: 0 }} />
+            <form className="landing-hero-search" onSubmit={handleSearch}>
+              <Search size={18} color="var(--sm-text-faint)" />
               <input
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search Beyoncé, Keanu Reeves, Ronaldo..."
-                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: '#fff', fontFamily: 'inherit' }}
+                aria-label="Search celebrities"
               />
-              <button type="submit" style={{
-                background: '#3b82f6', border: 'none', borderRadius: 10,
-                color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px',
-                cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap',
-              }}>Search</button>
+              <button type="submit" className="sm-btn sm-btn-primary" style={{ padding: '10px 18px', borderRadius: 10 }}>
+                Search
+              </button>
             </form>
 
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <Link to="/signup" className="cta-primary" style={{
-                textDecoration: 'none', background: '#fff', color: '#000',
-                fontWeight: 800, fontSize: 14, padding: '13px 28px',
-                borderRadius: 12, display: 'inline-flex', alignItems: 'center', gap: 7,
-                transition: 'opacity 0.2s',
-              }}>
-                Start for free <ArrowRight size={15} />
+            <div className="landing-hero-actions">
+              <Link to="/signup" className="sm-btn sm-btn-white" style={{ padding: '14px 28px', fontSize: 15 }}>
+                Start for free <ArrowRight size={16} />
               </Link>
-              <Link to="/explore" className="cta-ghost" style={{
-                textDecoration: 'none', border: '1.5px solid #2a2a2a', color: '#aaa',
-                fontWeight: 600, fontSize: 14, padding: '13px 24px',
-                borderRadius: 12, display: 'inline-flex', alignItems: 'center', gap: 6,
-                transition: 'border-color 0.2s',
-              }}>
+              <Link to="/explore" className="sm-btn sm-btn-ghost" style={{ padding: '14px 24px', fontSize: 15 }}>
                 Browse celebrities
               </Link>
             </div>
 
-            {/* Micro social proof */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 20 }}>
-              <div style={{ display: 'flex' }}>
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} style={{
-                    width: 28, height: 28, borderRadius: '50%', background: `hsl(${i*60},40%,30%)`,
-                    border: '2px solid #000', marginLeft: i ? -8 : 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, color: '#aaa', fontWeight: 600,
-                  }}>
-                    {['K','A','M','J','R'][i]}
-                  </div>
+            <div className="landing-hero-proof">
+              <div className="landing-avatar-stack" aria-hidden="true">
+                {['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#22c55e'].map((bg, i) => (
+                  <span key={i} style={{ background: bg }}>{['K', 'A', 'M', 'J', 'R'][i]}</span>
                 ))}
               </div>
-              <span style={{ fontSize: 13, color: '#666' }}>
-                <span style={{ color: '#aaa', fontWeight: 600 }}>500,000+</span> fans already connected
+              <span style={{ fontSize: 13, color: 'var(--sm-text-muted)' }}>
+                <strong style={{ color: 'var(--sm-text-secondary)' }}>500,000+</strong> fans already connected
               </span>
             </div>
           </div>
 
-          {/* Right — live chat demo */}
-          <div style={{ flex: '1 1 300px', maxWidth: 400, display: 'flex', justifyContent: 'center', animation: 'floatY 4s ease-in-out infinite' }}>
+          <div className="landing-hero-visual">
             {demoCell && (
-              <ChatDemo
-                celebName={demoCell.name || 'Dwayne Johnson'}
-                celebImg={demoCell.image}
-              />
+              <ChatDemo celebName={demoCell.name || 'Dwayne Johnson'} celebImg={demoCell.image} />
             )}
           </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
-          STATS BAR
-      ══════════════════════════════════════════ */}
-      <div style={{ borderTop: '1px solid #111', borderBottom: '1px solid #111', padding: '28px 16px' }}>
-        <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 0 }}>
+      {/* Stats */}
+      <div className="landing-stats">
+        <div className="landing-stats-inner">
           {[
             { value: '1,300+', label: 'Verified celebrities' },
             { value: '500K+',  label: 'Active fans' },
             { value: '2.4M',   label: 'Messages sent' },
             { value: '98%',    label: 'Reply rate (Pro)' },
-          ].map((s, i, arr) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
-              <Stat value={s.value} label={s.label} />
-              {i < arr.length - 1 && <div style={{ width: 1, height: 36, background: '#1a1a1a', flexShrink: 0 }} />}
+          ].map(s => (
+            <div key={s.label} className="landing-stat">
+              <div className="landing-stat-value">{s.value}</div>
+              <div className="landing-stat-label">{s.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════
-          CATEGORIES
-      ══════════════════════════════════════════ */}
-      <section style={{ padding: '48px 0' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px', marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px' }}>Browse by category</h2>
-            <Link to="/explore" style={{ color: '#555', fontSize: 13, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              All categories <ChevronRight size={13} />
+      {/* Categories */}
+      <section className="landing-section-tight">
+        <div className="landing-wrap">
+          <div className="landing-section-head">
+            <h2>Browse by category</h2>
+            <Link to="/explore" className="landing-link-muted">
+              All categories <ChevronRight size={14} />
             </Link>
           </div>
         </div>
-        <div style={{
-          display: 'flex', gap: 20, overflowX: 'auto', paddingLeft: 16, paddingRight: 16,
-          scrollbarWidth: 'none', msOverflowStyle: 'none', maxWidth: 1100, margin: '0 auto',
-        }}>
-          {categories.map((cat, idx) => {
-            const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(cat.name)}&background=1a1a1a&color=555&size=300`;
-            return (
-              <Link key={cat.label + idx} to={`/explore?cat=${cat.match}`}
-                style={{ textDecoration: 'none', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                <div style={{
-                  width: 90, height: 90, borderRadius: '50%',
-                  padding: 2.5, background: 'linear-gradient(135deg, #7c3aed, #3b82f6)',
-                }}>
-                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '2px solid #000' }}>
-                    <img
-                      src={cat.image || fallback}
-                      alt={cat.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
-                      onError={e => { e.currentTarget.src = fallback; }}
-                    />
+        <div className="landing-wrap">
+          <div className="landing-categories-scroll">
+            {categories.map((cat, idx) => {
+              const fallback = av(cat.name);
+              return (
+                <Link key={cat.label + idx} to={`/explore?cat=${cat.match}`} className="landing-cat-item">
+                  <div className="landing-cat-ring">
+                    <div className="landing-cat-ring-inner">
+                      <img src={cat.image || fallback} alt={cat.name}
+                        onError={e => { e.currentTarget.src = fallback; }} />
+                    </div>
                   </div>
-                </div>
-                <span style={{ color: '#ccc', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>{cat.label}</span>
-              </Link>
-            );
-          })}
+                  <span className="landing-cat-label">{cat.label}</span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
-          TRENDING STARS
-      ══════════════════════════════════════════ */}
-      <section style={{ padding: '48px 0', borderTop: '1px solid #0d0d0d' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px', marginBottom: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+      {/* Trending */}
+      <section className="landing-section-tight">
+        <div className="landing-wrap">
+          <div className="landing-section-head">
             <div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 4 }}>Trending now</h2>
-              <p style={{ color: '#555', fontSize: 13, margin: 0 }}>Most messaged celebrities this week</p>
+              <h2>Trending now</h2>
+              <p>Most messaged celebrities this week</p>
             </div>
-            <Link to="/explore" style={{ color: '#555', fontSize: 13, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              See all <ChevronRight size={13} />
+            <Link to="/explore" className="landing-link-muted">
+              See all <ChevronRight size={14} />
             </Link>
           </div>
-        </div>
-        <div style={{
-          display: 'flex', gap: 14, overflowX: 'auto', paddingLeft: 16, paddingRight: 16,
-          scrollbarWidth: 'none', msOverflowStyle: 'none', maxWidth: 1100, margin: '0 auto',
-        }}>
-          {(trending.length ? trending : [...Array(8)]).map((c, i) => {
-            const isReal = !!c?.name;
-            return (
-              <div key={isReal ? c.id : i} className={isReal ? 'celeb-card' : ''}
-                onClick={() => isReal && navigate(`/celebrity/${c.id}`)}
-                style={{ flexShrink: 0, width: 148, cursor: isReal ? 'pointer' : 'default' }}>
-                <div style={{ width: 148, height: 196, borderRadius: 14, overflow: 'hidden', background: '#0d0d0d', marginBottom: 10, position: 'relative' }}>
+          <div className="landing-trend-scroll">
+            {(trending.length ? trending : [...Array(8)]).map((c, i) => {
+              const isReal = !!c?.name;
+              return (
+                <div
+                  key={isReal ? c.id : i}
+                  className="landing-trend-card"
+                  onClick={() => isReal && navigate(celebPath(c))}
+                  onKeyDown={e => isReal && e.key === 'Enter' && navigate(celebPath(c))}
+                  role={isReal ? 'button' : undefined}
+                  tabIndex={isReal ? 0 : undefined}
+                >
+                  <div className="landing-trend-img">
+                    {isReal ? (
+                      <>
+                        <img src={c.image} alt={c.name}
+                          onError={e => { e.currentTarget.src = av(c.name); }} />
+                        <span className="landing-trend-badge">
+                          <MessageCircle size={10} color="var(--sm-accent)" />
+                          DM open
+                        </span>
+                      </>
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', animation: 'pulse 1.5s ease-in-out infinite', background: 'var(--sm-bg-surface)' }} />
+                    )}
+                  </div>
                   {isReal ? (
                     <>
-                      <img src={c.image} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
-                        onError={e => { e.currentTarget.src = av(c.name); }} />
-                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 50%)' }} />
-                      {/* DM badge */}
-                      <div style={{ position: 'absolute', bottom: 9, left: 9, background: 'rgba(0,0,0,0.7)', border: '1px solid #1f1f1f', borderRadius: 999, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <MessageCircle size={10} color="#3b82f6" />
-                        <span style={{ fontSize: 10, color: '#aaa', fontWeight: 600 }}>DM open</span>
+                      <div className="landing-trend-name">
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                        <span className="landing-verified"><Check size={7} strokeWidth={3.5} color="white" /></span>
                       </div>
+                      <div className="landing-trend-cat">{c.category}</div>
                     </>
                   ) : (
-                    <div style={{ width: '100%', height: '100%', background: '#0d0d0d', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                    <>
+                      <div style={{ height: 11, background: 'var(--sm-bg-surface)', borderRadius: 4, width: '80%', marginBottom: 5 }} />
+                      <div style={{ height: 9, background: 'var(--sm-bg-elevated)', borderRadius: 4, width: '55%' }} />
+                    </>
                   )}
                 </div>
-                {isReal ? (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
-                      <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Check size={7} strokeWidth={3.5} color="white" />
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 12, color: '#555', marginTop: 2 }}>{c.category}</div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ height: 11, background: '#111', borderRadius: 4, width: '80%', marginBottom: 5 }} />
-                    <div style={{ height: 9, background: '#0d0d0d', borderRadius: 4, width: '55%' }} />
-                  </>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
-          HOW IT ACTUALLY WORKS
-      ══════════════════════════════════════════ */}
-      <section style={{ padding: '64px 16px', borderTop: '1px solid #0d0d0d' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <h2 style={{ fontSize: 'clamp(24px,4vw,36px)', fontWeight: 900, letterSpacing: '-1px', marginBottom: 12 }}>
-              Three steps to your favourite celebrity
-            </h2>
-            <p style={{ color: '#555', fontSize: 15, maxWidth: 420, margin: '0 auto' }}>No middleman. No PR team. No auto-replies.</p>
+      {/* How it works */}
+      <section className="landing-section">
+        <div className="landing-wrap">
+          <div className="landing-center-head">
+            <h2>Three steps to your favourite celebrity</h2>
+            <p>No middleman. No PR team. No auto-replies.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 16 }}>
+          <div className="landing-steps">
             {[
-              {
-                icon: <Search size={22} color="#3b82f6" />,
-                step: '01',
-                title: 'Find who you love',
-                body: 'Search 1,300+ verified celebrities. Actors, musicians, athletes, creators. Every one of them real.',
-                bg: 'rgba(59,130,246,0.06)', border: 'rgba(59,130,246,0.15)',
-              },
-              {
-                icon: <Zap size={22} color="#7c3aed" />,
-                step: '02',
-                title: 'Send your message',
-                body: 'Follow for free or go Pro to unlock direct DMs, exclusive content, and monthly live Q&As.',
-                bg: 'rgba(124,58,237,0.06)', border: 'rgba(124,58,237,0.15)',
-                highlight: true,
-              },
-              {
-                icon: <MessageCircle size={22} color="#22c55e" />,
-                step: '03',
-                title: 'They actually reply',
-                body: '98% of Pro messages get a reply within 24 hours. Real words from the person you admire.',
-                bg: 'rgba(34,197,94,0.06)', border: 'rgba(34,197,94,0.15)',
-              },
-            ].map((s, i) => (
-              <div key={i} style={{
-                background: s.bg, border: `1px solid ${s.border}`,
-                borderRadius: 20, padding: '28px 24px', position: 'relative',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 14, background: '#0a0a0a', border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {s.icon}
-                  </div>
-                  <span style={{ fontSize: 12, color: '#333', fontWeight: 800 }}>{s.step}</span>
+              { icon: <Search size={22} color="var(--sm-accent)" />, step: '01', title: 'Find who you love', body: 'Search 1,300+ verified celebrities. Actors, musicians, athletes, creators. Every one of them real.' },
+              { icon: <Zap size={22} color="#a78bfa" />, step: '02', title: 'Send your message', body: 'Follow for free or go Pro to unlock direct DMs, exclusive content, and monthly live Q&As.' },
+              { icon: <MessageCircle size={22} color="var(--sm-success)" />, step: '03', title: 'They actually reply', body: '98% of Pro messages get a reply within 24 hours. Real words from the person you admire.' },
+            ].map(s => (
+              <div key={s.step} className="landing-step">
+                <div className="landing-step-top">
+                  <div className="landing-step-icon">{s.icon}</div>
+                  <span className="landing-step-num">{s.step}</span>
                 </div>
-                <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: '#fff' }}>{s.title}</h3>
-                <p style={{ fontSize: 13, color: '#555', lineHeight: 1.65, margin: 0 }}>{s.body}</p>
+                <h3>{s.title}</h3>
+                <p>{s.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
-          TESTIMONIALS
-      ══════════════════════════════════════════ */}
-      <section style={{ padding: '64px 16px', borderTop: '1px solid #0d0d0d' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 44 }}>
-            <h2 style={{ fontSize: 'clamp(22px,4vw,34px)', fontWeight: 900, letterSpacing: '-1px', marginBottom: 10 }}>
-              Fans who couldn't believe it
-            </h2>
-            <p style={{ color: '#555', fontSize: 14, margin: 0 }}>Real moments between real people.</p>
+      {/* Testimonials */}
+      <section className="landing-section">
+        <div className="landing-wrap">
+          <div className="landing-center-head">
+            <h2>Fans who couldn&apos;t believe it</h2>
+            <p>Real moments between real people.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16 }}>
+          <div className="landing-testimonials">
             {[
-              {
-                quote: "I sent a message on a Tuesday night not expecting anything. By Wednesday morning they had replied with a full paragraph. I actually cried.",
-                name: 'Amara O.',
-                tag: 'Messaged a Grammy-winning musician',
-                avatar: 'AO',
-                color: '#7c3aed',
-              },
-              {
-                quote: "Been a fan for 15 years. Thought stuff like this only happened to influencers. Then I got a 'thank you for sticking around' and my week was made.",
-                name: 'Daniel K.',
-                tag: 'Messaged his favourite actor',
-                avatar: 'DK',
-                color: '#3b82f6',
-              },
-              {
-                quote: "My daughter is obsessed with a pop star. I got her a Pro account for her birthday. When she got a reply she literally screamed. Worth every penny.",
-                name: 'Sarah M.',
-                tag: 'Pro member since 2025',
-                avatar: 'SM',
-                color: '#22c55e',
-              },
-            ].map((t, i) => (
-              <div key={i} style={{
-                background: '#080808', border: '1px solid #141414',
-                borderRadius: 20, padding: '26px 24px',
-              }}>
-                {/* Stars */}
-                <div style={{ display: 'flex', gap: 3, marginBottom: 16 }}>
+              { quote: "I sent a message on a Tuesday night not expecting anything. By Wednesday morning they had replied with a full paragraph. I actually cried.", name: 'Amara O.', tag: 'Messaged a Grammy-winning musician', avatar: 'AO', color: '#7c3aed' },
+              { quote: "Been a fan for 15 years. Thought stuff like this only happened to influencers. Then I got a 'thank you for sticking around' and my week was made.", name: 'Daniel K.', tag: 'Messaged his favourite actor', avatar: 'DK', color: 'var(--sm-accent)' },
+              { quote: "My daughter is obsessed with a pop star. I got her a Pro account for her birthday. When she got a reply she literally screamed. Worth every penny.", name: 'Sarah M.', tag: 'Pro member since 2025', avatar: 'SM', color: 'var(--sm-success)' },
+            ].map(t => (
+              <div key={t.name} className="landing-quote">
+                <div className="landing-quote-stars">
                   {[...Array(5)].map((_, s) => (
                     <Star key={s} size={13} color="#f59e0b" fill="#f59e0b" />
                   ))}
                 </div>
-                <p style={{ fontSize: 14, color: '#bbb', lineHeight: 1.7, margin: '0 0 20px', fontStyle: 'italic' }}>
-                  "{t.quote}"
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: '50%',
-                    background: `${t.color}22`, border: `1.5px solid ${t.color}44`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 700, color: t.color, flexShrink: 0,
-                  }}>{t.avatar}</div>
+                <p className="landing-quote-text">&ldquo;{t.quote}&rdquo;</p>
+                <div className="landing-quote-author">
+                  <div className="landing-quote-avatar" style={{ background: `${t.color}22`, color: t.color, border: `1.5px solid ${t.color}44` }}>
+                    {t.avatar}
+                  </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: '#444', marginTop: 1 }}>{t.tag}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--sm-text-faint)', marginTop: 2 }}>{t.tag}</div>
                   </div>
                 </div>
               </div>
@@ -586,22 +398,17 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
-          PRICING
-      ══════════════════════════════════════════ */}
-      <section style={{ padding: '64px 16px', borderTop: '1px solid #0d0d0d', background: '#030303' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <h2 style={{ fontSize: 'clamp(24px,4vw,36px)', fontWeight: 900, letterSpacing: '-1px', marginBottom: 12 }}>
-              Simple, honest pricing
-            </h2>
-            <p style={{ color: '#555', fontSize: 15 }}>Free forever to browse and follow. Pay only when you want to talk.</p>
+      {/* Pricing */}
+      <section className="landing-section landing-pricing-bg">
+        <div className="landing-wrap">
+          <div className="landing-center-head">
+            <h2>Simple, honest pricing</h2>
+            <p>Free forever to browse and follow. Pay only when you want to talk.</p>
           </div>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', alignItems: 'stretch' }}>
+          <div className="landing-pricing-grid">
             <PricingCard
               name="Fan"
               price="Free"
-              sub=""
               features={[
                 { text: 'Follow 1,300+ verified celebrities' },
                 { text: 'See public posts and updates' },
@@ -625,7 +432,7 @@ export default function Landing() {
               ]}
               cta="Go Pro"
               ctaLink="/signup"
-              highlight
+              featured
               badge="Most popular"
             />
             <PricingCard
@@ -646,47 +453,36 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
-          FOR CELEBRITIES
-      ══════════════════════════════════════════ */}
-      <section style={{ padding: '64px 16px', borderTop: '1px solid #0d0d0d' }}>
-        <div style={{ maxWidth: 760, margin: '0 auto' }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #0f0a1e, #0a0a0a)',
-            border: '1px solid #1f1040', borderRadius: 24,
-            padding: 'clamp(32px,5vw,56px)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 40, flexWrap: 'wrap' }}>
+      {/* For celebrities */}
+      <section className="landing-section">
+        <div className="landing-wrap">
+          <div className="landing-celeb-block">
+            <div className="landing-celeb-grid">
               <div style={{ flex: 1, minWidth: 260 }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#1a0a2e', border: '1px solid #3b1f6a', borderRadius: 999, padding: '4px 12px', marginBottom: 20 }}>
+                <div className="landing-badge" style={{ marginBottom: 20 }}>
                   <Shield size={12} color="#a78bfa" />
-                  <span style={{ fontSize: 12, color: '#a78bfa', fontWeight: 600 }}>For celebrities & public figures</span>
+                  For celebrities & public figures
                 </div>
-                <h2 style={{ fontSize: 'clamp(22px,3.5vw,32px)', fontWeight: 900, letterSpacing: '-1px', marginBottom: 14, lineHeight: 1.2 }}>
+                <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 14, lineHeight: 1.15 }}>
                   Your fanbase.<br />Your revenue.
                 </h2>
-                <p style={{ color: '#666', fontSize: 14, lineHeight: 1.7, marginBottom: 28 }}>
+                <p style={{ color: 'var(--sm-text-muted)', fontSize: 15, lineHeight: 1.7, marginBottom: 28 }}>
                   Join 1,300+ verified celebrities earning directly from fans with zero middleman. Monetise who you already are.
                 </p>
-                <Link to="/signup" style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  textDecoration: 'none', background: '#7c3aed',
-                  color: '#fff', fontWeight: 700, fontSize: 14,
-                  padding: '13px 26px', borderRadius: 12,
-                }}>
+                <Link to="/signup" className="sm-btn" style={{ background: 'var(--sm-pro)', color: '#fff', padding: '13px 26px' }}>
                   Apply to join <ArrowRight size={15} />
                 </Link>
               </div>
-              <div style={{ flex: '0 0 auto' }}>
+              <div className="landing-celeb-stats">
                 {[
                   { label: 'Revenue split', value: '80% yours' },
                   { label: 'Payout speed', value: 'Instant' },
                   { label: 'Application', value: 'Free' },
                   { label: 'Content control', value: 'Full' },
-                ].map((item, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 32, padding: '11px 0', borderBottom: i < 3 ? '1px solid #1a1a1a' : 'none' }}>
-                    <span style={{ fontSize: 13, color: '#555' }}>{item.label}</span>
-                    <span style={{ fontSize: 13, color: '#a78bfa', fontWeight: 700 }}>{item.value}</span>
+                ].map(item => (
+                  <div key={item.label} className="landing-celeb-stat-row">
+                    <span style={{ color: 'var(--sm-text-muted)' }}>{item.label}</span>
+                    <span>{item.value}</span>
                   </div>
                 ))}
               </div>
@@ -695,55 +491,30 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
-          FINAL CTA
-      ══════════════════════════════════════════ */}
-      <section style={{ padding: '72px 16px', textAlign: 'center', background: '#000' }}>
-        <div style={{ maxWidth: 520, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 'clamp(28px,5vw,44px)', fontWeight: 900, letterSpacing: '-1.5px', marginBottom: 16, lineHeight: 1.15 }}>
-            You're one message away.
-          </h2>
-          <p style={{ color: '#555', fontSize: 15, marginBottom: 12, lineHeight: 1.6 }}>
-            Join 500,000+ fans who stopped waiting and started talking.
-          </p>
-          <p style={{ color: '#333', fontSize: 13, marginBottom: 36 }}>Free to start · No credit card · Cancel anytime</p>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link to="/signup" className="cta-primary" style={{
-              textDecoration: 'none', background: '#fff', color: '#000',
-              fontWeight: 800, fontSize: 15, padding: '14px 32px',
-              borderRadius: 14, display: 'inline-flex', alignItems: 'center', gap: 8,
-              transition: 'opacity 0.2s',
-            }}>
-              Start for free <ArrowRight size={16} />
-            </Link>
-            <Link to="/explore" className="cta-ghost" style={{
-              textDecoration: 'none', border: '1.5px solid #2a2a2a', color: '#aaa',
-              fontWeight: 600, fontSize: 15, padding: '14px 28px',
-              borderRadius: 14, transition: 'border-color 0.2s',
-            }}>
-              Browse celebrities
-            </Link>
-          </div>
+      {/* Final CTA */}
+      <section className="landing-final">
+        <h2>You&apos;re one message away.</h2>
+        <p>Join 500,000+ fans who stopped waiting and started talking.</p>
+        <p className="landing-final-note">Free to start · No credit card · Cancel anytime</p>
+        <div className="landing-final-actions">
+          <Link to="/signup" className="sm-btn sm-btn-white" style={{ padding: '14px 32px', fontSize: 15 }}>
+            Start for free <ArrowRight size={16} />
+          </Link>
+          <Link to="/explore" className="sm-btn sm-btn-ghost" style={{ padding: '14px 28px', fontSize: 15 }}>
+            Browse celebrities
+          </Link>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
-          FOOTER
-      ══════════════════════════════════════════ */}
-      <footer style={{ borderTop: '1px solid #0d0d0d', padding: '40px 16px 28px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 32, marginBottom: 36 }}>
-
-            {/* Brand */}
-            <div style={{ flex: '0 0 auto' }}>
-              <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', marginBottom: 8, letterSpacing: '-0.5px' }}>Starmeet</div>
-              <div style={{ fontSize: 13, color: '#444', maxWidth: 220, lineHeight: 1.6 }}>
-                Direct access to the celebrities you love.
-              </div>
+      {/* Footer */}
+      <footer className="landing-footer">
+        <div className="landing-wrap">
+          <div className="landing-footer-grid">
+            <div className="landing-footer-brand">
+              <div className="sm-logo">Starmeet</div>
+              <p>Direct access to the celebrities you love.</p>
             </div>
-
-            {/* Links — only real pages */}
-            <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
+            <div className="landing-footer-cols">
               {[
                 { title: 'Product', links: [
                   { label: 'Explore', href: '/explore' },
@@ -754,22 +525,27 @@ export default function Landing() {
                   { label: 'Sign up', href: '/signup' },
                   { label: 'Log in', href: '/login' },
                 ]},
+                { title: 'Legal', links: [
+                  { label: 'Terms', href: '/terms' },
+                  { label: 'Privacy', href: '/privacy' },
+                ]},
               ].map(col => (
-                <div key={col.title}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#333', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>{col.title}</div>
+                <div key={col.title} className="landing-footer-col">
+                  <h4>{col.title}</h4>
                   {col.links.map(l => (
-                    <div key={l.label} style={{ marginBottom: 9 }}>
-                      <Link to={l.href} style={{ color: '#555', fontSize: 13, textDecoration: 'none' }}>{l.label}</Link>
-                    </div>
+                    <Link key={l.label} to={l.href}>{l.label}</Link>
                   ))}
                 </div>
               ))}
             </div>
           </div>
-
-          <div style={{ borderTop: '1px solid #0d0d0d', paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-            <span style={{ fontSize: 12, color: '#333' }}>© 2026 Starmeet. All rights reserved.</span>
-            <Link to="/admin" style={{ fontSize: 12, color: '#222', textDecoration: 'none' }}>Admin</Link>
+          <div className="landing-footer-bottom">
+            <span>© 2026 Starmeet. All rights reserved.</span>
+            <div className="landing-footer-legal">
+              <Link to="/terms">Terms</Link>
+              <Link to="/privacy">Privacy</Link>
+              <Link to="/admin">Admin</Link>
+            </div>
           </div>
         </div>
       </footer>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Check, Edit2, Heart, Users, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCelebContext } from '../context/CelebContext';
+import { celebPath } from '../utils/celebrity';
 
 export default function Profile() {
   const { user, updateProfile, logout, follows, likes } = useAuth();
@@ -126,7 +127,7 @@ export default function Profile() {
             {followedCelebs.map(c => {
               const av2 = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=111&color=aaa&size=200`;
               return (
-                <Link key={c.id} to={`/celebrity/${c.id}`} style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:12, background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:'10px 14px' }}>
+                <Link key={c.id} to={celebPath(c)} style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:12, background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:'10px 14px' }}>
                   <div style={{ position:'relative', flexShrink:0 }}>
                     <img src={c.image} alt={c.name}
                       style={{ width:44, height:44, borderRadius:'50%', objectFit:'cover', objectPosition:'top' }}

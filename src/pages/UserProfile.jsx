@@ -5,6 +5,7 @@ import { Camera, Edit2, Grid3x3, Heart, MessageCircle, LogOut, Check, ChevronLef
 import { useAuth } from '../context/AuthContext';
 import { useFanPosts } from '../context/FanPostContext';
 import { useCelebContext } from '../context/CelebContext';
+import { celebPath } from '../utils/celebrity';
 
 function fmtNum(n) {
   if (n >= 1_000_000) return (n/1_000_000).toFixed(1)+'M';
@@ -282,7 +283,7 @@ export default function UserProfile() {
           ) : (
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {followedCelebs.slice(0, 8).map(c => (
-                <Link key={c.id} to={`/celebrity/${c.id}`} style={{ display:'flex', alignItems:'center', gap:12, background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:'10px 14px', textDecoration:'none' }}>
+                <Link key={c.id} to={celebPath(c)} style={{ display:'flex', alignItems:'center', gap:12, background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:'10px 14px', textDecoration:'none' }}>
                   <img src={c.image} alt={c.name}
                     style={{ width:42, height:42, borderRadius:'50%', objectFit:'cover', objectPosition:'top', flexShrink:0 }}
                     onError={e => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=111&color=aaa&size=200`; }}

@@ -20,10 +20,17 @@ export const STRIPE_CONFIG = {
     celebrity: 'https://buy.stripe.com/REPLACE_WITH_CELEBRITY_PAYMENT_LINK',
   },
 
-  // Where Stripe redirects after successful payment
-  // Must match what you set in the Payment Link settings
-  successUrl: `${window.location.origin}/upgrade-success`,
-  cancelUrl:  `${window.location.origin}/messages`,
+  // Where Stripe redirects after successful payment (lazy — safe for build)
+  get successUrl() {
+    return typeof window !== 'undefined'
+      ? `${window.location.origin}/upgrade-success`
+      : '/upgrade-success';
+  },
+  get cancelUrl() {
+    return typeof window !== 'undefined'
+      ? `${window.location.origin}/messages`
+      : '/messages';
+  },
 
   plans: {
     pro: {

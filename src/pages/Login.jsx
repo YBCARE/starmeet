@@ -1,14 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Camera, Zap } from 'lucide-react';
+import { Eye, EyeOff, Camera, MessageCircle, Star, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
-const inp = {
-  width:'100%', display:'block', background:'#0d0d0d', border:'1px solid #222',
-  borderRadius:10, padding:'11px 14px', fontSize:14, color:'#fff',
-  outline:'none', fontFamily:'Inter,system-ui,sans-serif',
-  marginBottom:10, boxSizing:'border-box',
-};
 
 export default function Login() {
   const navigate  = useNavigate();
@@ -17,6 +10,10 @@ export default function Login() {
 
   const initMode  = location.pathname === '/signup' ? 'signup' : 'login';
   const [mode, setMode]         = useState(initMode);
+
+  useEffect(() => {
+    setMode(location.pathname === '/signup' ? 'signup' : 'login');
+  }, [location.pathname]);
   const [showPass, setShowPass]           = useState(false);
   const [error, setError]                 = useState('');
   const [verifyNotice, setVerifyNotice]   = useState(false);
@@ -65,7 +62,6 @@ export default function Login() {
         });
         if (res?.error) { setError(res.error); return; }
         setError('');
-        // Show email verification notice before redirecting
         setVerifyNotice(true);
         setTimeout(() => navigate('/onboarding', { replace: true }), 4000);
       }
@@ -85,147 +81,196 @@ export default function Login() {
     }
   }
 
+  function switchMode(next) {
+    setMode(next);
+    setError('');
+    navigate(next === 'signup' ? '/signup' : '/login', { replace: true });
+  }
+
   return (
-    <div style={{ minHeight:'100vh', background:'#000', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px 16px', fontFamily:'Inter,system-ui,sans-serif' }}>
+    <div className="sm-auth-page">
+      <aside className="sm-auth-hero">
+        <Link to="/" className="sm-logo" style={{ marginBottom: 40, display: 'inline-block', textDecoration: 'none' }}>
+          Starmeet
+        </Link>
 
-      {/* Card */}
-      <div style={{ width:'100%', maxWidth:420, background:'#000', border:'1px solid #1a1a1a', borderRadius:20, padding:'32px 24px' }}>
+        <h1 className="sm-auth-hero-title">
+          Your message.<br />
+          <span>Their reply.</span>
+        </h1>
+        <p className="sm-auth-hero-lead">
+          Join 500,000+ fans who DM the celebrities they love — and actually hear back.
+        </p>
 
-        {/* Logo */}
-        <div style={{ textAlign:'center', marginBottom:24 }}>
-          <Link to="/" style={{ textDecoration:'none' }}>
-            <span style={{ fontSize:26, fontWeight:800, color:'#fff', letterSpacing:'-0.5px' }}>Starmeet</span>
-          </Link>
-        </div>
-
-        {/* Toggle */}
-        <div style={{ display:'flex', background:'#0d0d0d', borderRadius:10, padding:4, marginBottom:20 }}>
-          {[['login','Sign In'],['signup','Sign Up']].map(([m, label]) => (
-            <button key={m} onClick={() => { setMode(m); setError(''); }} style={{
-              flex:1, padding:'8px 0', border:'none', borderRadius:8,
-              fontSize:13, fontWeight:600, cursor:'pointer',
-              background: mode === m ? '#fff' : 'transparent',
-              color: mode === m ? '#000' : '#555', transition:'all 0.15s', fontFamily:'inherit',
-            }}>{label}</button>
+        <div className="sm-auth-hero-stats">
+          {[
+            { icon: <MessageCircle size={16} color="var(--sm-accent)" />, text: <><strong>1,300+</strong> verified celebrities</> },
+            { icon: <Star size={16} color="#f59e0b" />, text: <><strong>98%</strong> Pro reply rate</> },
+            { icon: <Shield size={16} color="#a78bfa" />, text: <><strong>Free</strong> to browse and follow</> },
+          ].map((item, i) => (
+            <div key={i} className="sm-auth-hero-stat">
+              <span className="sm-auth-hero-icon">{item.icon}</span>
+              {item.text}
+            </div>
           ))}
         </div>
+      </aside>
 
-        {/* Google button */}
-        <button onClick={handleGoogle} style={{
-          width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-          padding:'11px 16px', background:'#0d0d0d', border:'1px solid #222', borderRadius:10,
-          color:'#fff', fontSize:14, fontWeight:600, cursor:'pointer', marginBottom:16, fontFamily:'inherit',
-        }}>
-          <svg width="18" height="18" viewBox="0 0 48 48">
-            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.97 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-          </svg>
-          Continue with Google
-        </button>
-
-        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
-          <div style={{ flex:1, height:1, background:'#1a1a1a' }} />
-          <span style={{ fontSize:11, color:'#444' }}>or</span>
-          <div style={{ flex:1, height:1, background:'#1a1a1a' }} />
-        </div>
-
-        {/* Verification notice */}
-        {verifyNotice && (
-          <div style={{ background:'rgba(34,197,94,0.1)', border:'1px solid rgba(34,197,94,0.3)', borderRadius:8, padding:'12px 14px', marginBottom:12, fontSize:13, color:'#22c55e', lineHeight:1.5 }}>
-            ✅ Account created! We sent a verification email to <strong>{form.email}</strong>. Please check your inbox and click the link to verify your account.
-          </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div style={{ background:'rgba(224,82,82,0.1)', border:'1px solid rgba(224,82,82,0.3)', borderRadius:8, padding:'9px 12px', marginBottom:12, fontSize:13, color:'#e05252' }}>
-            {error}
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleSubmit}>
-
-          {/* Signup extras */}
-          {mode === 'signup' && (
-            <>
-              {/* Avatar upload */}
-              <div style={{ display:'flex', justifyContent:'center', marginBottom:16 }}>
-                <div style={{ position:'relative', cursor:'pointer' }} onClick={() => fileRef.current?.click()}>
-                  <div style={{ width:72, height:72, borderRadius:'50%', background:'#1a1a1a', border:'2px dashed #333', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    {avatarPreview
-                      ? <img src={avatarPreview} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt="" />
-                      : <Camera size={22} color="#555" />
-                    }
-                  </div>
-                  <div style={{ position:'absolute', bottom:0, right:0, width:22, height:22, borderRadius:'50%', background:'#3b82f6', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <Camera size={11} color="white" />
-                  </div>
-                </div>
-                <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} style={{ display:'none' }} />
-              </div>
-
-              <input value={form.username} onChange={e => set('username', e.target.value)}
-                placeholder="Username (e.g. keanu_fan)" required style={inp} />
-              <input value={form.name} onChange={e => set('name', e.target.value)}
-                placeholder="Display name" style={inp} />
-              <textarea value={form.bio} onChange={e => set('bio', e.target.value)}
-                placeholder="Bio (optional)" rows={2}
-                style={{ ...inp, resize:'vertical', lineHeight:1.5 }} />
-              <input value={form.dob} onChange={e => set('dob', e.target.value)}
-                type="date" placeholder="Date of birth"
-                style={{ ...inp, color: form.dob ? '#fff' : '#555', colorScheme:'dark' }} />
-            </>
-          )}
-
-          <input value={form.email} onChange={e => set('email', e.target.value)}
-            type="email" placeholder="Email address" required style={inp} />
-
-          <div style={{ position:'relative', marginBottom:10 }}>
-            <input value={form.password} onChange={e => set('password', e.target.value)}
-              type={showPass ? 'text' : 'password'} placeholder="Password" required
-              style={{ ...inp, marginBottom:0, paddingRight:44 }} />
-            <button type="button" onClick={() => setShowPass(s => !s)} style={{
-              position:'absolute', right:14, top:'50%', transform:'translateY(-50%)',
-              background:'none', border:'none', cursor:'pointer', color:'#555', lineHeight:0,
-            }}>
-              {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+      <main className="sm-auth-panel">
+        <div className="sm-auth-box">
+          <div className="sm-auth-panel-logo">
+            <Link to="/" className="sm-logo" style={{ textDecoration: 'none' }}>Starmeet</Link>
           </div>
 
-          {mode === 'signup' && (
-            <input value={form.confirmPassword} onChange={e => set('confirmPassword', e.target.value)}
-              type={showPass ? 'text' : 'password'} placeholder="Confirm password" required style={inp} />
-          )}
-
-          {mode === 'login' && (
-            <div style={{ textAlign:'right', marginBottom:12 }}>
-              <button type="button" style={{ background:'none', border:'none', fontSize:12, color:'#888', cursor:'pointer', fontFamily:'inherit' }}>
-                Forgot password?
+          <div className="sm-auth-toggle">
+            {[['login', 'Sign In'], ['signup', 'Sign Up']].map(([m, label]) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => switchMode(m)}
+                className={`sm-auth-toggle-btn${mode === m ? ' active' : ''}`}
+              >
+                {label}
               </button>
+            ))}
+          </div>
+
+          <button type="button" onClick={handleGoogle} disabled={submitting} className="sm-auth-google">
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.97 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <div className="sm-auth-divider"><span>or</span></div>
+
+          {verifyNotice && (
+            <div className="sm-auth-alert sm-auth-alert-success">
+              Account created! We sent a verification email to <strong>{form.email}</strong>. Check your inbox and click the link to verify.
             </div>
           )}
 
-          <button type="submit" disabled={submitting} style={{
-            width:'100%', padding:'13px', border:'none', borderRadius:10,
-            background: submitting ? '#333' : '#fff', color: submitting ? '#888' : '#000',
-            fontSize:14, fontWeight:700,
-            cursor: submitting ? 'not-allowed' : 'pointer', fontFamily:'inherit', marginTop:4,
-            transition:'background 0.15s',
-          }}>
-            {submitting ? '⏳ Please wait...' : (mode === 'login' ? 'Sign In' : 'Create Account')}
-          </button>
-        </form>
-      </div>
+          {error && (
+            <div className="sm-auth-alert sm-auth-alert-error">{error}</div>
+          )}
 
-      {/* Terms */}
-      <p style={{ fontSize:11, color:'#444', textAlign:'center', marginTop:16, maxWidth:340, lineHeight:1.6 }}>
-        By continuing you agree to Starmeet's{' '}
-        <Link to="/" style={{ color:'#666', textDecoration:'underline' }}>Terms</Link> and{' '}
-        <Link to="/" style={{ color:'#666', textDecoration:'underline' }}>Privacy Policy</Link>.
-      </p>
+          <form onSubmit={handleSubmit}>
+            {mode === 'signup' && (
+              <>
+                <div className="sm-auth-avatar-wrap">
+                  <div className="sm-auth-avatar" onClick={() => fileRef.current?.click()} role="button" tabIndex={0}
+                    onKeyDown={e => e.key === 'Enter' && fileRef.current?.click()}>
+                    <div className="sm-auth-avatar-ring">
+                      {avatarPreview
+                        ? <img src={avatarPreview} alt="Profile preview" />
+                        : <Camera size={22} color="var(--sm-text-faint)" />
+                      }
+                    </div>
+                    <span className="sm-auth-avatar-badge">
+                      <Camera size={11} color="white" />
+                    </span>
+                  </div>
+                  <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} hidden />
+                </div>
+
+                <input
+                  className="sm-input"
+                  value={form.username}
+                  onChange={e => set('username', e.target.value)}
+                  placeholder="Username (e.g. keanu_fan)"
+                  required
+                />
+                <input
+                  className="sm-input"
+                  value={form.name}
+                  onChange={e => set('name', e.target.value)}
+                  placeholder="Display name"
+                />
+                <textarea
+                  className="sm-input sm-textarea"
+                  value={form.bio}
+                  onChange={e => set('bio', e.target.value)}
+                  placeholder="Bio (optional)"
+                  rows={2}
+                />
+                <input
+                  className="sm-input"
+                  value={form.dob}
+                  onChange={e => set('dob', e.target.value)}
+                  type="date"
+                  required={false}
+                />
+              </>
+            )}
+
+            <input
+              className="sm-input"
+              value={form.email}
+              onChange={e => set('email', e.target.value)}
+              type="email"
+              placeholder="Email address"
+              required
+              autoComplete="email"
+            />
+
+            <div className="sm-auth-pass-wrap">
+              <input
+                className="sm-input"
+                value={form.password}
+                onChange={e => set('password', e.target.value)}
+                type={showPass ? 'text' : 'password'}
+                placeholder="Password"
+                required
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              />
+              <button
+                type="button"
+                className="sm-auth-pass-toggle"
+                onClick={() => setShowPass(s => !s)}
+                aria-label={showPass ? 'Hide password' : 'Show password'}
+              >
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+
+            {mode === 'signup' && (
+              <input
+                className="sm-input"
+                value={form.confirmPassword}
+                onChange={e => set('confirmPassword', e.target.value)}
+                type={showPass ? 'text' : 'password'}
+                placeholder="Confirm password"
+                required
+                autoComplete="new-password"
+              />
+            )}
+
+            {mode === 'login' && (
+              <div className="sm-auth-forgot">
+                <button type="button">Forgot password?</button>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="sm-btn sm-btn-white sm-auth-submit"
+              style={{ opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+            >
+              {submitting ? 'Please wait…' : (mode === 'login' ? 'Sign In' : 'Create Account')}
+            </button>
+          </form>
+
+          <p className="sm-auth-terms">
+            By continuing you agree to Starmeet&apos;s{' '}
+            <Link to="/terms">Terms</Link> and{' '}
+            <Link to="/privacy">Privacy Policy</Link>.
+          </p>
+        </div>
+      </main>
     </div>
   );
 }

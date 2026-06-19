@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { FanPostProvider } from './context/FanPostContext';
 import { AdminProvider } from './context/AdminContext';
 import { TopLoadingBar } from './components/LoadingProgress';
+import ErrorBoundary from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import Landing from './pages/Landing';
@@ -19,6 +20,9 @@ import FanProfile from './pages/FanProfile';
 import CreatePost from './pages/CreatePost';
 import Onboarding from './pages/Onboarding';
 import UpgradeSuccess from './pages/UpgradeSuccess';
+import NotFound from './pages/NotFound';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 
 const pv = {
   initial: { opacity: 0, y: 10 },
@@ -28,7 +32,7 @@ const pv = {
 
 function AnimatedRoutes() {
   const location = useLocation();
-  const noNavbar = ['/', '/login', '/signup', '/onboarding', '/upgrade-success'].includes(location.pathname) ||
+  const noNavbar = ['/', '/login', '/signup', '/onboarding', '/upgrade-success', '/terms', '/privacy'].includes(location.pathname) ||
                    location.pathname.startsWith('/admin');
 
   return (
@@ -37,15 +41,16 @@ function AnimatedRoutes() {
       <AnimatePresence mode="wait">
         <motion.div key={location.pathname} variants={pv} initial="initial" animate="animate" exit="exit">
           <Routes location={location}>
-            {/* Public */}
             <Route path="/"       element={<Landing />} />
             <Route path="/login"  element={<Login />} />
             <Route path="/signup" element={<Login />} />
+            <Route path="/terms"  element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/admin"  element={<Admin />} />
 
-            {/* Protected */}
-            <Route path="/explore"       element={<ProtectedRoute><Explore /></ProtectedRoute>} />
+            <Route path="/explore"       element={<Explore />} />
             <Route path="/celebrity/:id" element={<CelebrityProfile />} />
+
             <Route path="/feed"          element={<ProtectedRoute><Feed /></ProtectedRoute>} />
             <Route path="/messages"      element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/profile"       element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
@@ -54,6 +59,8 @@ function AnimatedRoutes() {
             <Route path="/create-post"   element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
             <Route path="/onboarding"       element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/upgrade-success" element={<ProtectedRoute><UpgradeSuccess /></ProtectedRoute>} />
+
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </motion.div>
       </AnimatePresence>
@@ -73,14 +80,16 @@ function AppShell() {
 
 export default function App() {
   return (
-    <AdminProvider>
-      <AuthProvider>
-        <FanPostProvider>
-          <CelebProvider>
-            <AppShell />
-          </CelebProvider>
-        </FanPostProvider>
-      </AuthProvider>
-    </AdminProvider>
+    <ErrorBoundary>
+      <AdminProvider>
+        <AuthProvider>
+          <FanPostProvider>
+            <CelebProvider>
+              <AppShell />
+            </CelebProvider>
+          </FanPostProvider>
+        </AuthProvider>
+      </AdminProvider>
+    </ErrorBoundary>
   );
 }

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, Heart, Users } from 'lucide-react';
 import { getFakeFans } from '../services/fakeFans';
 import { useCelebContext } from '../context/CelebContext';
+import { celebPath } from '../utils/celebrity';
 
 function seeded(seed) {
   let s = seed >>> 0;
@@ -116,7 +117,7 @@ export default function FanProfile() {
         ) : (
           <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:24 }}>
             {followedCelebs.map(c => (
-              <Link key={c.id} to={`/celebrity/${c.id}`} style={{ display:'flex', alignItems:'center', gap:12, background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:'10px 14px', textDecoration:'none' }}>
+              <Link key={c.id} to={celebPath(c)} style={{ display:'flex', alignItems:'center', gap:12, background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:'10px 14px', textDecoration:'none' }}>
                 <img src={c.image} alt={c.name}
                   style={{ width:42, height:42, borderRadius:'50%', objectFit:'cover', objectPosition:'top', flexShrink:0 }}
                   onError={e => { e.currentTarget.src = av(c.name); }}

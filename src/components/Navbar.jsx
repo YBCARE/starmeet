@@ -5,58 +5,41 @@ import { useAuth } from '../context/AuthContext';
 import { loadAll } from '../services/messageStore';
 import NotificationBell from './NotificationBell';
 
-// ─── Landing navbar (not logged in) ──────────────────────────────────────────
 function PublicNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav style={{
-      position: 'sticky', top: 0, zIndex: 100,
-      background: '#000', borderBottom: '1px solid #1a1a1a', height: 56,
-    }}>
-      <div style={{
-        maxWidth: 1100, margin: '0 auto', padding: '0 16px',
-        height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        position: 'relative',
-      }}>
-        {/* Hamburger */}
-        <button onClick={() => setMenuOpen(!menuOpen)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', padding: 4, lineHeight: 0 }}>
-          {menuOpen ? <X size={22} /> : <Menu size={22} />}
+    <nav className="sm-nav">
+      <div className="sm-nav-inner">
+        <button
+          type="button"
+          aria-label="Menu"
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="sm-icon-btn"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+        >
+          {menuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        {/* Logo — centred */}
-        <Link to="/" style={{
-          textDecoration: 'none', position: 'absolute',
-          left: '50%', transform: 'translateX(-50%)',
-        }}>
-          <span style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>
-            Starmeet
-          </span>
+        <Link to="/" className="sm-logo" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+          Starmeet
         </Link>
 
-        {/* Login */}
-        <Link to="/login" style={{
-          textDecoration: 'none', color: '#fff', fontSize: 14, fontWeight: 600,
-          padding: '7px 18px', border: '1.5px solid #333', borderRadius: 999,
-        }}>
-          Log in
-        </Link>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <Link to="/explore" className="sm-nav-link desktop-nav">Explore</Link>
+          <Link to="/login" className="sm-btn sm-btn-ghost" style={{ padding: '8px 16px' }}>Log in</Link>
+          <Link to="/signup" className="sm-btn sm-btn-primary" style={{ padding: '8px 16px' }}>Sign up</Link>
+        </div>
       </div>
 
-      {/* Mobile drawer */}
       {menuOpen && (
         <div style={{
-          position: 'absolute', top: 56, left: 0, right: 0,
-          background: '#0a0a0a', borderBottom: '1px solid #1a1a1a',
+          position: 'absolute', top: 'var(--sm-nav-height)', left: 0, right: 0,
+          background: 'var(--sm-bg-elevated)', borderBottom: '1px solid var(--sm-border)',
           padding: '8px 16px 16px', zIndex: 99,
         }}>
-          {[['Sign up', '/signup'], ['Explore', '/explore'], ['About', '/']].map(([label, to]) => (
-            <Link key={label} to={to} onClick={() => setMenuOpen(false)} style={{
-              display: 'block', padding: '13px 4px',
-              color: '#fff', textDecoration: 'none', fontSize: 15, fontWeight: 500,
-              borderBottom: '1px solid #1a1a1a',
-            }}>
+          {[['Explore', '/explore'], ['Sign up', '/signup'], ['Log in', '/login']].map(([label, to]) => (
+            <Link key={to} to={to} onClick={() => setMenuOpen(false)} className="sm-nav-link" style={{ display: 'block', marginBottom: 4 }}>
               {label}
             </Link>
           ))}
@@ -66,7 +49,6 @@ function PublicNavbar() {
   );
 }
 
-// ─── Authenticated navbar ─────────────────────────────────────────────────────
 function AuthNavbar() {
   const { user, logout, unreadCount: notifUnread } = useAuth();
   const navigate = useNavigate();
@@ -74,7 +56,6 @@ function AuthNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // Count unread message conversations
   const msgUnread = (() => {
     try {
       const myId = user ? `user_${user.id}` : null;
@@ -104,160 +85,85 @@ function AuthNavbar() {
   const initial = (user?.name || user?.email || 'F')[0].toUpperCase();
 
   return (
-    <nav style={{
-      position: 'sticky', top: 0, zIndex: 100,
-      background: '#000', borderBottom: '1px solid #1a1a1a', height: 56,
-    }}>
-      <div style={{
-        maxWidth: 1100, margin: '0 auto', padding: '0 16px',
-        height: '100%', display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        {/* Logo */}
-        <Link to="/" style={{ textDecoration: 'none', marginRight: 24 }}>
-          <span style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>
-            Starmeet
-          </span>
-        </Link>
+    <nav className="sm-nav">
+      <div className="sm-nav-inner">
+        <Link to="/feed" className="sm-logo">Starmeet</Link>
 
-        {/* Desktop links */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}
-          className="desktop-nav">
+        <div className="desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, marginLeft: 16 }}>
           {links.map(l => (
-            <Link key={l.to} to={l.to} style={{
-              textDecoration: 'none',
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 14px', borderRadius: 8,
-              fontSize: 14, fontWeight: 600,
-              color: isActive(l.to) ? '#fff' : '#666',
-              background: isActive(l.to) ? '#1a1a1a' : 'transparent',
-              transition: 'all 0.15s',
-            }}>
-              <l.icon size={15} />
+            <Link key={l.to} to={l.to} className={`sm-nav-link${isActive(l.to) ? ' active' : ''}`}>
+              <l.icon size={16} />
               {l.label}
             </Link>
           ))}
         </div>
 
-        {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', position: 'relative' }}>
-          {/* Create post */}
-          <Link to="/create-post" style={{
-            width: 36, height: 36, borderRadius: 8,
-            background: '#3b82f6', border: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', textDecoration: 'none',
-          }}>
+          <Link to="/create-post" className="sm-icon-btn" style={{ background: 'var(--sm-accent)', borderColor: 'transparent', color: '#fff' }}>
             <Plus size={18} />
           </Link>
-
-          {/* Search */}
-          <Link to="/explore" style={{
-            width: 36, height: 36, borderRadius: 8,
-            background: '#0d0d0d', border: '1px solid #1a1a1a',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#666', textDecoration: 'none',
-          }}>
-            <Search size={16} />
-          </Link>
-
-          {/* Messages */}
-          <Link to="/messages" style={{
-            width: 36, height: 36, borderRadius: 8,
-            background: '#0d0d0d', border: '1px solid #1a1a1a',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#666', textDecoration: 'none', position: 'relative',
-          }}>
+          <Link to="/explore" className="sm-icon-btn" aria-label="Search"><Search size={16} /></Link>
+          <Link to="/messages" className="sm-icon-btn" aria-label="Messages" style={{ position: 'relative' }}>
             <MessageCircle size={16} />
-            {notifUnread > 0 && (
+            {msgUnread > 0 && (
               <span style={{
-                position: 'absolute', top: -5, right: -5,
-                background: '#3b82f6', color: '#fff', borderRadius: '50%',
-                minWidth: 17, height: 17, fontSize: 9, fontWeight: 800,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '2px solid #000', padding: '0 2px', lineHeight: 1,
+                position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18,
+                background: 'var(--sm-accent)', color: '#fff', borderRadius: '50%',
+                fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '2px solid #000', padding: '0 3px',
               }}>
-                {notifUnread > 9 ? '9+' : notifUnread}
+                {msgUnread > 9 ? '9+' : msgUnread}
               </span>
             )}
           </Link>
-
-          {/* Notifications */}
           <NotificationBell />
-
-          {/* Profile avatar */}
-          <button onClick={() => setProfileOpen(!profileOpen)} style={{
-            width: 36, height: 36, borderRadius: '50%',
-            background: '#7c3aed', border: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontSize: 14, fontWeight: 700,
-            cursor: 'pointer',
-          }}>
+          <button
+            type="button"
+            onClick={() => setProfileOpen(!profileOpen)}
+            aria-label="Profile menu"
+            style={{
+              width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #7c3aed, #0095f6)', color: '#fff',
+              fontSize: 14, fontWeight: 700,
+            }}
+          >
             {initial}
           </button>
 
-          {/* Profile dropdown */}
+          <button type="button" onClick={() => setMenuOpen(!menuOpen)} className="mobile-menu-btn sm-icon-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+
           {profileOpen && (
             <div style={{
-              position: 'absolute', top: 44, right: 0,
-              background: '#0d0d0d', border: '1px solid #222',
-              borderRadius: 12, padding: 8, minWidth: 180, zIndex: 200,
+              position: 'absolute', top: 48, right: 0, background: 'var(--sm-bg-elevated)',
+              border: '1px solid var(--sm-border)', borderRadius: 'var(--sm-radius-md)',
+              padding: 8, minWidth: 200, zIndex: 200, boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
             }}>
-              <div style={{ padding: '8px 12px', borderBottom: '1px solid #1a1a1a', marginBottom: 4 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{user?.name || 'Fan'}</div>
-                <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{user?.email || ''}</div>
+              <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--sm-border)', marginBottom: 4 }}>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>{user?.name || 'Fan'}</div>
+                <div style={{ fontSize: 12, color: 'var(--sm-text-muted)', marginTop: 2 }}>{user?.email || ''}</div>
               </div>
-              <Link to="/profile" onClick={() => setProfileOpen(false)} style={dropdownItemStyle}>
-                <User size={14} /> My Profile
-              </Link>
-              <Link to="/create-post" onClick={() => setProfileOpen(false)} style={dropdownItemStyle}>
-                <Plus size={14} /> Create Post
-              </Link>
-              <Link to="/explore" onClick={() => setProfileOpen(false)} style={dropdownItemStyle}>
-                <Compass size={14} /> Explore
-              </Link>
-              <Link to="/feed" onClick={() => setProfileOpen(false)} style={dropdownItemStyle}>
-                <Home size={14} /> Feed
-              </Link>
-              <button onClick={handleLogout} style={{ ...dropdownItemStyle, border: 'none', cursor: 'pointer', width: '100%', color: '#e05252' }}>
+              <Link to="/profile" onClick={() => setProfileOpen(false)} style={dropdownItemStyle}><User size={14} /> My Profile</Link>
+              <Link to="/create-post" onClick={() => setProfileOpen(false)} style={dropdownItemStyle}><Plus size={14} /> Create Post</Link>
+              <button type="button" onClick={handleLogout} style={{ ...dropdownItemStyle, border: 'none', cursor: 'pointer', width: '100%', color: 'var(--sm-danger)' }}>
                 <LogOut size={14} /> Log out
               </button>
             </div>
           )}
-
-          {/* Mobile hamburger */}
-          <button onClick={() => setMenuOpen(!menuOpen)} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: '#fff', padding: 4, lineHeight: 0, display: 'none',
-          }} className="mobile-menu-btn">
-            {menuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
         </div>
       </div>
 
-      {/* Mobile drawer */}
       {menuOpen && (
         <div style={{
-          position: 'absolute', top: 56, left: 0, right: 0,
-          background: '#0a0a0a', borderBottom: '1px solid #1a1a1a',
-          padding: '8px 16px 16px', zIndex: 99,
+          position: 'absolute', top: 'var(--sm-nav-height)', left: 0, right: 0,
+          background: 'var(--sm-bg-elevated)', borderBottom: '1px solid var(--sm-border)', padding: '8px 16px 16px', zIndex: 99,
         }}>
           {links.map(l => (
-            <Link key={l.to} to={l.to} onClick={() => setMenuOpen(false)} style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '13px 4px', color: '#fff', textDecoration: 'none',
-              fontSize: 15, fontWeight: 500, borderBottom: '1px solid #1a1a1a',
-            }}>
+            <Link key={l.to} to={l.to} onClick={() => setMenuOpen(false)} className="sm-nav-link" style={{ display: 'flex', marginBottom: 4 }}>
               <l.icon size={16} /> {l.label}
             </Link>
           ))}
-          <button onClick={handleLogout} style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '13px 4px', color: '#e05252', background: 'none',
-            border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 500,
-            fontFamily: 'inherit', marginTop: 4,
-          }}>
-            <LogOut size={16} /> Log out
-          </button>
         </div>
       )}
     </nav>
@@ -265,14 +171,11 @@ function AuthNavbar() {
 }
 
 const dropdownItemStyle = {
-  display: 'flex', alignItems: 'center', gap: 8,
-  padding: '9px 12px', borderRadius: 8,
-  color: '#ccc', textDecoration: 'none', fontSize: 13, fontWeight: 500,
-  background: 'transparent', transition: 'background 0.15s',
-  width: '100%', boxSizing: 'border-box',
+  display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 8,
+  color: 'var(--sm-text-secondary)', textDecoration: 'none', fontSize: 13, fontWeight: 500,
+  background: 'transparent', width: '100%', boxSizing: 'border-box',
 };
 
-// ─── Smart export — picks the right navbar ────────────────────────────────────
 export default function Navbar() {
   const { isLoggedIn } = useAuth();
   return isLoggedIn ? <AuthNavbar /> : <PublicNavbar />;

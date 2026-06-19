@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import { useFanPosts } from '../context/FanPostContext';
 import { getSomeFans } from '../services/fakeFans';
 import { useMeta } from '../hooks/useMeta';
+import { celebPath } from '../utils/celebrity';
+import './Feed.css';
 
 // ─── Priority celebrities shown first ────────────────────────────────────────
 const PRIORITY_NAMES = [
@@ -427,24 +429,17 @@ function StoriesRow({ celebrities }) {
 
   return (
     <>
-      <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:16, padding:'14px 0', marginBottom:16 }}>
-        <div style={{ display:'flex', gap:14, overflowX:'auto', padding:'0 14px', scrollbarWidth:'none' }}>
+      <div className="feed-stories">
+        <div className="feed-stories-scroll">
           {stories.map((c, i) => (
-            <div key={c.id} onClick={() => openStory(i)}
-              style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:6, cursor:'pointer' }}>
-              <div style={{
-                width:58, height:58, borderRadius:'50%', padding:2,
-                background: seen[i]
-                  ? 'linear-gradient(135deg,#333,#444)'
-                  : 'linear-gradient(135deg,#3b82f6,#8b5cf6,#ec4899)',
-              }}>
-                <div style={{ width:'100%', height:'100%', borderRadius:'50%', overflow:'hidden', border:'2px solid #0a0a0a' }}>
+            <div key={c.id} onClick={() => openStory(i)} className="feed-story">
+              <div className={`feed-story-ring ${seen[i] ? 'seen' : 'unseen'}`}>
+                <div className="feed-story-inner">
                   <img src={c.image} alt={c.name}
-                    style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top' }}
                     onError={e => { e.currentTarget.src = av(c.name); }} />
                 </div>
               </div>
-              <span style={{ fontSize:10, color: seen[i] ? '#444' : '#888', whiteSpace:'nowrap', maxWidth:62, overflow:'hidden', textOverflow:'ellipsis' }}>
+              <span className={`feed-story-name ${seen[i] ? 'seen' : 'unseen'}`}>
                 {c.name.split(' ')[0]}
               </span>
             </div>
@@ -581,158 +576,132 @@ function PostCard({ post, onLike, onToggleComments, onAddComment, liked, saved, 
   const isViral = post.likes > 1_700_000;
 
   return (
-    <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:16, overflow:'hidden', marginBottom:14 }}>
+    <div className="feed-post">
 
-      {/* Viral/hot badge */}
       {isViral && (
-        <div style={{ background:'linear-gradient(90deg,#7c3aed,#ec4899)', padding:'5px 14px', display:'flex', alignItems:'center', gap:6 }}>
-          <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>🔥 Going viral · {fmtNum(post.likes)} likes</span>
+        <div className="feed-post-viral">
+          🔥 Going viral · {fmtNum(post.likes)} likes
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px' }}>
-        <div onClick={() => navigate(`/celebrity/${c.id}`)} style={{ textDecoration:'none', flexShrink:0, position:'relative', cursor:'pointer' }}>
-          <img src={c.image} alt={c.name}
-            style={{ width:42, height:42, borderRadius:'50%', objectFit:'cover', objectPosition:'top', display:'block' }}
+      <div className="feed-post-header">
+        <div onClick={() => navigate(celebPath(c))} className="feed-post-avatar-wrap">
+          <img src={c.image} alt={c.name} className="feed-post-avatar"
             onError={e => { e.currentTarget.src = av(c.name); }} />
-          <div style={{ position:'absolute', bottom:0, right:0, width:15, height:15, borderRadius:'50%', background:'#3b82f6', border:'2px solid #0a0a0a', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div className="feed-verified">
             <Check size={7} strokeWidth={3} color="white" />
           </div>
         </div>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div onClick={() => navigate(`/celebrity/${c.id}`)} style={{ cursor:'pointer' }}>
-            <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{c.name}</div>
-          </div>
-          <div style={{ fontSize:11, color:'#555', marginTop:1 }}>{c.category} · {post.time} ago</div>
+        <div className="feed-post-meta">
+          <div onClick={() => navigate(celebPath(c))} className="feed-post-name">{c.name}</div>
+          <div className="feed-post-sub">{c.category} · {post.time} ago</div>
         </div>
-        <Link to={`/messages?with=celeb_${c.id}`} style={{
-          background:'none', border:'1.5px solid #333', borderRadius:999,
-          color:'#ccc', fontSize:12, fontWeight:600, padding:'4px 14px',
-          cursor:'pointer', fontFamily:'inherit', textDecoration:'none',
-          display:'inline-flex', alignItems:'center', gap:5,
-        }}>
+        <Link to={`/messages?with=celeb_${c.id}`} className="feed-dm-btn">
           <MessageCircle size={12} /> DM
         </Link>
       </div>
 
-      {/* Caption */}
-      <div style={{ padding:'0 14px 10px', fontSize:14, color:'#ddd', lineHeight:1.6 }}>{post.text}</div>
+      <div className="feed-post-caption">{post.text}</div>
 
-      {/* Media */}
       {post.isVideo ? (
-        <div style={{ position:'relative', cursor:'pointer' }} onClick={() => onExpandVideo(post)}>
+        <div className="feed-post-media video" onClick={() => onExpandVideo(post)}>
           <img src={post.image} alt={c.name}
-            style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover', objectPosition:'top center', display:'block' }}
-            onError={e => { e.currentTarget.style.objectPosition='center'; }} />
-          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.22)' }} />
-          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <div style={{ width:64, height:64, borderRadius:'50%', background:'rgba(255,255,255,0.18)', backdropFilter:'blur(8px)', border:'2px solid rgba(255,255,255,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <Play size={28} fill="white" color="white" style={{ marginLeft:4 }} />
+            style={{ aspectRatio: '16/9', objectPosition: 'top center' }}
+            onError={e => { e.currentTarget.style.objectPosition = 'center'; }} />
+          <div className="feed-video-overlay" />
+          <div className="feed-video-play">
+            <div className="feed-video-play-btn">
+              <Play size={28} fill="white" color="white" style={{ marginLeft: 4 }} />
             </div>
           </div>
-          <div style={{ position:'absolute', bottom:8, right:10, background:'rgba(0,0,0,0.75)', borderRadius:4, padding:'2px 7px', fontSize:12, fontWeight:700, color:'#fff', letterSpacing:'0.5px' }}>
-            {post.videoDur}
-          </div>
-          <div style={{ position:'absolute', top:8, left:10, background:'rgba(0,0,0,0.65)', borderRadius:4, padding:'2px 7px', fontSize:11, color:'#fff', display:'flex', alignItems:'center', gap:4 }}>
+          <div className="feed-video-dur">{post.videoDur}</div>
+          <div className="feed-video-label">
             <Play size={10} fill="white" color="white" /> Video
           </div>
         </div>
       ) : (
-        <div style={{ background:'#111', position:'relative' }}>
+        <div className="feed-post-media">
           <img src={post.image} alt=""
-            style={{ width:'100%', aspectRatio:'5/4', objectFit:'cover', display:'block', filter: post.isExclusive && !isPro ? 'blur(18px) brightness(0.5)' : 'none', transition:'filter 0.3s' }}
+            style={{ filter: post.isExclusive && !isPro ? 'blur(18px) brightness(0.5)' : 'none', transition: 'filter 0.3s' }}
             loading="lazy"
-            onError={e => { e.currentTarget.style.display='none'; }} />
-          {/* Exclusive overlay for non-Pro users */}
+            onError={e => { e.currentTarget.style.display = 'none'; }} />
           {post.isExclusive && !isPro && (
-            <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10 }}>
-              <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(124,58,237,0.9)', display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(4px)' }}>
-                <span style={{ fontSize:24 }}>🔒</span>
-              </div>
-              <div style={{ textAlign:'center', padding:'0 24px' }}>
-                <div style={{ fontSize:14, fontWeight:800, color:'#fff', marginBottom:4 }}>Pro Exclusive</div>
-                <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)', marginBottom:12, lineHeight:1.4 }}>
+            <div className="feed-exclusive-overlay">
+              <div className="feed-exclusive-lock">🔒</div>
+              <div style={{ textAlign: 'center', padding: '0 24px' }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Pro Exclusive</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 12, lineHeight: 1.4 }}>
                   Upgrade to see this post from {c.name?.split(' ')[0]}
                 </div>
-                <Link to="/profile" style={{ display:'inline-block', padding:'8px 20px', background:'#7c3aed', color:'#fff', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none' }}>
+                <Link to="/profile" className="feed-upgrade-link">
                   Upgrade to Pro — $9/mo
                 </Link>
               </div>
             </div>
           )}
-          {/* Exclusive badge for Pro users */}
           {post.isExclusive && isPro && (
-            <div style={{ position:'absolute', top:8, left:8, background:'linear-gradient(90deg,#7c3aed,#3b82f6)', borderRadius:999, padding:'3px 10px', display:'flex', alignItems:'center', gap:4 }}>
-              <span style={{ fontSize:10, fontWeight:700, color:'#fff' }}>⭐ Exclusive</span>
-            </div>
+            <span className="feed-exclusive-badge">⭐ Exclusive</span>
           )}
         </div>
       )}
 
-      {/* Actions */}
-      <div style={{ padding:'10px 14px', display:'flex', alignItems:'center', gap:18, borderBottom:'1px solid #0d0d0d' }}>
-        <button onClick={handleLike} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:5, padding:0, color: liked ? '#e05252' : '#666', fontFamily:'inherit' }}>
-          <Heart size={21} fill={liked ? '#e05252' : 'none'} color={liked ? '#e05252' : '#666'}
-            style={{ transition:'transform 0.2s', transform: likeAnim ? 'scale(1.45)' : 'scale(1)' }} />
-          <span style={{ fontSize:13, fontWeight:600 }}>{fmtNum(liked ? post.likes + 1 : post.likes)}</span>
+      <div className="feed-actions">
+        <button onClick={handleLike} className={`feed-action-btn${liked ? ' liked' : ''}`}>
+          <Heart size={21} fill={liked ? '#e05252' : 'none'} color={liked ? '#e05252' : 'currentColor'}
+            className="heart-anim" style={{ transform: likeAnim ? 'scale(1.45)' : 'scale(1)' }} />
+          <span>{fmtNum(liked ? post.likes + 1 : post.likes)}</span>
         </button>
 
-        <button onClick={() => onToggleComments(post.id)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:5, padding:0, color:'#666', fontFamily:'inherit' }}>
-          <MessageCircle size={21} color={post.showComments ? '#3b82f6' : '#666'} />
-          <span style={{ fontSize:13, fontWeight:600 }}>{fmtNum(post.commCnt)}</span>
+        <button onClick={() => onToggleComments(post.id)} className={`feed-action-btn${post.showComments ? ' active' : ''}`}>
+          <MessageCircle size={21} color={post.showComments ? 'var(--sm-accent)' : 'currentColor'} />
+          <span>{fmtNum(post.commCnt)}</span>
         </button>
 
-        <button style={{ background:'none', border:'none', cursor:'pointer', padding:0 }}>
-          <Share2 size={21} color="#666" />
-        </button>
+        <button className="feed-action-btn"><Share2 size={21} /></button>
 
-        <button onClick={() => onToggleSave(post.id)} style={{ background:'none', border:'none', cursor:'pointer', padding:0, marginLeft:'auto' }}>
-          <Bookmark size={21} fill={saved ? '#3b82f6' : 'none'} color={saved ? '#3b82f6' : '#666'} />
+        <button onClick={() => onToggleSave(post.id)} className={`feed-action-btn save${saved ? ' active' : ''}`}>
+          <Bookmark size={21} fill={saved ? 'var(--sm-accent)' : 'none'} color={saved ? 'var(--sm-accent)' : 'currentColor'} />
         </button>
       </div>
 
-      {/* Comments panel */}
       {post.showComments && (
         <>
-          <div style={{ maxHeight:360, overflowY:'auto', padding:'6px 14px 8px' }}>
+          <div className="feed-comments">
             {post.comments.map(cm => (
-              <div key={cm.id} style={{ display:'flex', gap:8, padding:'8px 0', borderBottom:'1px solid #0a0a0a' }}>
-                <div style={{ position:'relative', flexShrink:0 }}>
-                  <img src={cm.isOwner ? (cm.avatar || av(cm.user)) : (cm.avatar || av(cm.user))} alt={cm.user}
-                    style={{ width:30, height:30, borderRadius:'50%', objectFit:'cover', objectPosition:'top' }}
+              <div key={cm.id} className="feed-comment">
+                <div className="feed-comment-avatar-wrap">
+                  <img src={cm.avatar || av(cm.user)} alt={cm.user} className="feed-comment-avatar"
                     onError={e => { e.currentTarget.src = av(cm.user); }} />
                   {cm.isOwner && (
-                    <div style={{ position:'absolute', bottom:0, right:0, width:12, height:12, borderRadius:'50%', background:'#3b82f6', border:'2px solid #0a0a0a', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <div className="feed-comment-verified">
                       <Check size={6} strokeWidth={3.5} color="white" />
                     </div>
                   )}
                 </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ display:'flex', gap:7, alignItems:'center', flexWrap:'wrap' }}>
-                    <span style={{ fontSize:12, fontWeight:700, color: cm.isOwner ? '#fff' : '#aaa' }}>{cm.user}</span>
-                    {cm.isOwner && <span style={{ fontSize:10, background:'#1e3a5f', border:'1px solid #2a4f8a', borderRadius:4, padding:'1px 6px', color:'#60a5fa' }}>Author</span>}
-                    <span style={{ fontSize:10, color:'#444' }}>{cm.time} ago</span>
+                <div style={{ flex: 1 }}>
+                  <div className="feed-comment-head">
+                    <span className={`feed-comment-user ${cm.isOwner ? 'owner' : 'fan'}`}>{cm.user}</span>
+                    {cm.isOwner && <span className="feed-comment-author-badge">Author</span>}
+                    <span className="feed-comment-time">{cm.time} ago</span>
                   </div>
-                  <div style={{ fontSize:13, color: cm.isOwner ? '#ddd' : '#bbb', marginTop:3, lineHeight:1.5 }}>{cm.text}</div>
+                  <div className={`feed-comment-text ${cm.isOwner ? 'owner' : 'fan'}`}>{cm.text}</div>
                 </div>
               </div>
             ))}
             {post.commCnt > 50 && (
-              <div style={{ textAlign:'center', padding:'10px 0', color:'#444', fontSize:12 }}>+{fmtNum(post.commCnt - 50)} more comments</div>
+              <div className="feed-comments-more">+{fmtNum(post.commCnt - 50)} more comments</div>
             )}
           </div>
 
-          <form onSubmit={submitComment} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px 12px', borderTop:'1px solid #0d0d0d' }}>
-            <img src={userAvatar || av(userName || 'Fan')} alt=""
-              style={{ width:28, height:28, borderRadius:'50%', flexShrink:0, objectFit:'cover' }} />
+          <form onSubmit={submitComment} className="feed-comment-form">
+            <img src={userAvatar || av(userName || 'Fan')} alt="" />
             <input
               value={commentText}
               onChange={e => setCommentText(e.target.value)}
               placeholder="Add a comment..."
-              style={{ flex:1, background:'#111', border:'1px solid #1a1a1a', borderRadius:999, padding:'7px 14px', fontSize:13, color:'#fff', outline:'none', fontFamily:'inherit' }}
+              className="feed-comment-input"
             />
-            <button type="submit" style={{ background:'none', border:'none', cursor:'pointer', padding:0, color: commentText ? '#3b82f6' : '#333' }}>
+            <button type="submit" className={`feed-comment-send${commentText ? ' active' : ' inactive'}`}>
               <Send size={18} />
             </button>
           </form>
@@ -746,32 +715,33 @@ function PostCard({ post, onLike, onToggleComments, onAddComment, liked, saved, 
 function FanPostCard({ post, onLike, liked }) {
   const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n||'F')}&background=1a1a1a&color=aaa&size=100`;
   return (
-    <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:16, overflow:'hidden', marginBottom:14 }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px' }}>
-        <Link to="/profile" style={{ textDecoration:'none', flexShrink:0 }}>
-          <img src={post.userAvatar || av(post.userName)} alt=""
-            style={{ width:40, height:40, borderRadius:'50%', objectFit:'cover' }} />
+    <div className="feed-post">
+      <div className="feed-post-header">
+        <Link to="/profile" className="feed-post-avatar-wrap">
+          <img src={post.userAvatar || av(post.userName)} alt="" className="feed-post-avatar" />
         </Link>
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{post.userName || post.username}</div>
-          <div style={{ fontSize:11, color:'#555' }}>Fan · {new Date(post.createdAt).toLocaleDateString()}</div>
+        <div className="feed-post-meta">
+          <div className="feed-post-name">{post.userName || post.username}</div>
+          <div className="feed-post-sub">Fan · {new Date(post.createdAt).toLocaleDateString()}</div>
         </div>
-        <span style={{ fontSize:10, background:'#1a1a1a', border:'1px solid #222', borderRadius:4, padding:'2px 7px', color:'#666' }}>Fan Post</span>
+        <span className="feed-fan-badge">Fan Post</span>
       </div>
-      {post.caption && <div style={{ padding:'0 14px 10px', fontSize:14, color:'#bbb', lineHeight:1.55 }}>{post.caption}</div>}
-      {post.media && <img src={post.media} alt="" style={{ width:'100%', aspectRatio:'4/3', objectFit:'cover', display:'block' }} />}
-      {post.taggedCelebs?.length > 0 && (
-        <div style={{ padding:'8px 14px 0', fontSize:12, color:'#3b82f6' }}>with {post.taggedCelebs.join(', ')}</div>
+      {post.caption && <div className="feed-post-caption">{post.caption}</div>}
+      {post.media && (
+        <div className="feed-post-media">
+          <img src={post.media} alt="" style={{ aspectRatio: '4/3' }} />
+        </div>
       )}
-      <div style={{ padding:'10px 14px', display:'flex', gap:16, alignItems:'center' }}>
-        <button onClick={() => onLike(post.id)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:5, padding:0, color: liked ? '#e05252' : '#666', fontFamily:'inherit' }}>
-          <Heart size={20} fill={liked ? '#e05252' : 'none'} color={liked ? '#e05252' : '#666'} />
-          <span style={{ fontSize:13, fontWeight:600 }}>{fmtNum(post.likes || 0)}</span>
+      {post.taggedCelebs?.length > 0 && (
+        <div className="feed-tagged">with {post.taggedCelebs.join(', ')}</div>
+      )}
+      <div className="feed-actions">
+        <button onClick={() => onLike(post.id)} className={`feed-action-btn${liked ? ' liked' : ''}`}>
+          <Heart size={20} fill={liked ? '#e05252' : 'none'} color={liked ? '#e05252' : 'currentColor'} />
+          <span>{fmtNum(post.likes || 0)}</span>
         </button>
-        <button style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:5, padding:0, color:'#666', fontFamily:'inherit' }}>
-          <MessageCircle size={20} color="#666" />
-        </button>
-        <button style={{ background:'none', border:'none', cursor:'pointer', padding:0 }}><Share2 size={20} color="#666" /></button>
+        <button className="feed-action-btn"><MessageCircle size={20} /></button>
+        <button className="feed-action-btn"><Share2 size={20} /></button>
       </div>
     </div>
   );
@@ -862,43 +832,38 @@ export default function Feed() {
   }, [posts, celebFollows]);
 
   return (
-    <div style={{ background:'#000', minHeight:'100vh', color:'#fff', fontFamily:'Inter,system-ui,sans-serif' }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={{ maxWidth:620, margin:'0 auto', padding:'16px 14px 60px' }}>
+    <div className="feed-page">
+      <div className="feed-inner">
 
-        {/* For You / Following tabs */}
-        <div style={{ display:'flex', gap:0, marginBottom:16, background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:4 }}>
-          {[['foryou','For You'],['following','Following']].map(([tab, label]) => (
-            <button key={tab} onClick={() => setFeedTab(tab)} style={{
-              flex:1, padding:'8px 0', borderRadius:9, border:'none', cursor:'pointer', fontFamily:'inherit',
-              fontSize:13, fontWeight:700, transition:'all 0.15s',
-              background: feedTab === tab ? '#fff' : 'transparent',
-              color:      feedTab === tab ? '#000' : '#555',
-            }}>{label}</button>
+        <div className="feed-tabs">
+          {[['foryou', 'For You'], ['following', 'Following']].map(([tab, label]) => (
+            <button key={tab} onClick={() => setFeedTab(tab)}
+              className={`feed-tab${feedTab === tab ? ' active' : ''}`}>
+              {label}
+            </button>
           ))}
         </div>
 
         <StoriesRow celebrities={celebrities} />
 
-        {/* ── Following tab empty state ─────────────────────────────────────── */}
         {feedTab === 'following' && celebFollows.length === 0 && (
-          <div style={{ textAlign:'center', padding:'56px 24px' }}>
-            <div style={{ fontSize:44, marginBottom:16 }}>⭐</div>
-            <div style={{ fontSize:18, fontWeight:700, color:'#fff', marginBottom:10 }}>Follow your first star</div>
-            <div style={{ fontSize:14, color:'#555', lineHeight:1.6, marginBottom:24 }}>
-              Posts from celebrities you follow will appear here.<br />Discover who to follow on Explore.
+          <div className="feed-empty">
+            <div className="feed-empty-icon">⭐</div>
+            <div className="feed-empty-title">Follow your first star</div>
+            <div className="feed-empty-text">
+              Posts from celebrities you follow will appear here.<br />
+              Discover who to follow on Explore.
             </div>
-            <Link to="/explore" style={{ display:'inline-block', padding:'12px 28px', background:'#3b82f6', color:'#fff', borderRadius:10, fontWeight:700, fontSize:14, textDecoration:'none' }}>
+            <Link to="/explore" className="sm-btn sm-btn-primary" style={{ padding: '12px 28px' }}>
               Discover Stars →
             </Link>
           </div>
         )}
 
-        {/* ── Following tab: posts from followed celebs ─────────────────────── */}
         {feedTab === 'following' && celebFollows.length > 0 && followingPosts.length === 0 && (
-          <div style={{ textAlign:'center', padding:'40px 24px', color:'#555' }}>
-            <div style={{ fontSize:32, marginBottom:10 }}>📭</div>
-            <div style={{ fontSize:14, color:'#666', lineHeight:1.6 }}>Loading posts from the stars you follow…</div>
+          <div className="feed-empty" style={{ padding: '40px 24px' }}>
+            <div className="feed-empty-icon" style={{ fontSize: 32 }}>📭</div>
+            <div className="feed-empty-text">Loading posts from the stars you follow…</div>
           </div>
         )}
 
@@ -923,15 +888,15 @@ export default function Feed() {
         {/* ── For You tab ───────────────────────────────────────────────────── */}
         {feedTab === 'foryou' && (posts.length === 0 ? (
           [...Array(4)].map((_, i) => (
-            <div key={i} style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:16, overflow:'hidden', marginBottom:14 }}>
-              <div style={{ padding:14, display:'flex', gap:10, alignItems:'center' }}>
-                <div style={{ width:42, height:42, borderRadius:'50%', background:'#1a1a1a' }} />
+            <div key={i} className="feed-skeleton">
+              <div className="feed-skeleton-head">
+                <div className="feed-skeleton-avatar" />
                 <div>
-                  <div style={{ width:110, height:11, background:'#1a1a1a', borderRadius:5, marginBottom:6 }} />
-                  <div style={{ width:70,  height:9,  background:'#141414', borderRadius:5 }} />
+                  <div className="feed-skeleton-line" style={{ width: 110 }} />
+                  <div className="feed-skeleton-line short" />
                 </div>
               </div>
-              <div style={{ width:'100%', aspectRatio:'5/4', background:'#111' }} />
+              <div className="feed-skeleton-media" />
             </div>
           ))
         ) : (() => {
@@ -965,8 +930,8 @@ export default function Feed() {
         <div ref={sentinelRef} style={{ height:10 }} />
 
         {loading && (
-          <div style={{ textAlign:'center', padding:'18px 0 40px', color:'#555', fontSize:13, fontWeight:500, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
-            <div style={{ width:16, height:16, border:'2px solid #222', borderTopColor:'#3b82f6', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+          <div className="feed-loading">
+            <div className="feed-spinner" />
             Loading more stars...
           </div>
         )}

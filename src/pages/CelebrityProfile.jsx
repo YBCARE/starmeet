@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { getSomeFans, getFakeFans } from '../services/fakeFans';
 import { fetchCelebPhotos, fetchCelebBio } from '../services/wikiPhotos';
 import { useMeta } from '../hooks/useMeta';
+import { findCelebrity, celebPath } from '../utils/celebrity';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function seeded(seed) {
@@ -184,7 +185,7 @@ export default function CelebrityProfile() {
   const navigate = useNavigate();
 
   const celeb = useMemo(() =>
-    celebrities.find(c => String(c.id) === String(id)), [celebrities, id]);
+    findCelebrity(celebrities, id), [celebrities, id]);
 
   const isMemorial = !!celeb?.isMemorial;
 
@@ -274,10 +275,11 @@ export default function CelebrityProfile() {
 
   if (!celeb) {
     return (
-      <div style={{ minHeight:'100vh', background:'#000', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:10, color:'#555' }}>
-        <div style={{ fontSize:32 }}>😕</div>
-        <div>Celebrity not found</div>
-        <Link to="/explore" style={{ color:'#3b82f6', textDecoration:'none' }}>Browse all stars</Link>
+      <div className="sm-empty">
+        <div className="sm-empty-icon">?</div>
+        <h1 className="sm-empty-title">Celebrity not found</h1>
+        <p className="sm-empty-text">Try searching in Explore — we have 1,300+ profiles.</p>
+        <Link to="/explore" className="sm-btn sm-btn-primary">Browse all stars</Link>
       </div>
     );
   }

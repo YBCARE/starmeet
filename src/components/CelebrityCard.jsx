@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Users, Check } from 'lucide-react';
+import { celebPath } from '../utils/celebrity';
 
 export default function CelebrityCard({ celebrity: c, index = 0 }) {
   const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=111827&color=3B82F6&size=400`;
@@ -12,7 +13,7 @@ export default function CelebrityCard({ celebrity: c, index = 0 }) {
       transition={{ delay: Math.min(index * 0.04, 0.5) }}
       whileHover={{ y: -4, scale: 1.01 }}
     >
-      <Link to={`/celebrity/${c.id}`}>
+      <Link to={celebPath(c)}>
         <div className="glow-card bg-[#111] border border-white/10 rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer group">
 
           {/* Cover strip */}

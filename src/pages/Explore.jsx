@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Search, Check, Users, TrendingUp, Zap, Clock, ArrowUpDown } from 'lucide-react';
+import { Search, Check, Users, TrendingUp, Zap, Clock, ArrowUpDown, X } from 'lucide-react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useCelebContext } from '../context/CelebContext';
 import { useAuth } from '../context/AuthContext';
+import { celebPath } from '../utils/celebrity';
 
 const CATS = ['All','Actor','Actress','Musician','Director','Movie Producer','Comedian','Model','Athlete','Creator'];
 
@@ -45,8 +46,8 @@ function CelebCard({ c, index }) {
   const meta = useMemo(() => getCelebMeta(c, index), [c.id, index]);
 
   return (
-    <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:14, overflow:'hidden', cursor:'pointer', position:'relative' }}>
-      <Link to={`/celebrity/${c.id}`} style={{ textDecoration:'none', display:'block' }}>
+    <div className="sm-card card-glow" style={{ cursor:'pointer', position:'relative' }}>
+      <Link to={celebPath(c)} style={{ textDecoration:'none', display:'block' }}>
         <div style={{ aspectRatio:'3/4', overflow:'hidden', background:'#111', position:'relative' }}>
           <img src={c.image} alt={c.name}
             style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top', display:'block' }}
@@ -144,7 +145,7 @@ function CelebRow({ celebrities, label, icon, labelColor }) {
           const following = isFollowing(c.id);
           return (
             <div key={c.id} style={{ flexShrink:0, width:130 }}>
-              <Link to={`/celebrity/${c.id}`} style={{ textDecoration:'none', display:'block' }}>
+              <Link to={celebPath(c)} style={{ textDecoration:'none', display:'block' }}>
                 <div style={{ width:130, height:170, borderRadius:12, overflow:'hidden', background:'#111', position:'relative', marginBottom:8 }}>
                   <img src={c.image} alt={c.name}
                     style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top' }}

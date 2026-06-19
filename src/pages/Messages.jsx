@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   Send, Search, Check, CheckCheck, X, Image, Smile, ChevronLeft,
-  MessageCircle, Lock, Clock, Mic,
+  MessageCircle, Lock, Clock,
 } from 'lucide-react';
 import { useCelebContext } from '../context/CelebContext';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +10,9 @@ import {
   loadAll, saveAll, convoId, updateConvoStatus,
   getConvosForUser, subscribeToConvos, syncConvosFromFirestore, appendMessage, uid,
 } from '../services/messageStore';
+import { celebPath } from '../utils/celebrity';
+import { redirectToStripe } from '../config/stripe';
+import './Messages.css';
 
 // ─── Smart reply engine ───────────────────────────────────────────────────────
 // Reads what the fan said and picks a contextually appropriate reply from the celebrity
@@ -248,11 +251,10 @@ function fmtTime(ts) {
 // ─── Typing indicator ─────────────────────────────────────────────────────────
 function TypingBubble() {
   return (
-    <div style={{ display:'flex', gap:4, padding:'10px 14px', background:'#1a1a1a', borderRadius:'16px 16px 16px 4px', width:'fit-content', alignItems:'center' }}>
-      {[0,1,2].map(i => (
-        <div key={i} style={{ width:7, height:7, borderRadius:'50%', background:'#555', animation:`typebounce 1.2s ${i*0.2}s ease-in-out infinite` }} />
-      ))}
-      <style>{`@keyframes typebounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}`}</style>
+    <div className="msg-typing">
+      <div className="msg-typing-dot" />
+      <div className="msg-typing-dot" />
+      <div className="msg-typing-dot" />
     </div>
   );
 }
@@ -274,39 +276,35 @@ function NewConvoModal({ celebrities, fansDb, currentUser, onSelect, onClose }) 
   }, [q, celebrities, fansDb, currentUser]);
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.9)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-      <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:16, width:'100%', maxWidth:440 }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', borderBottom:'1px solid #111' }}>
-          <h3 style={{ fontSize:16, fontWeight:700, color:'#fff' }}>New Message</h3>
-          <button onClick={onClose} style={{ background:'none', border:'none', color:'#555', cursor:'pointer', lineHeight:0 }}><X size={20}/></button>
+    <div className="msg-modal-overlay">
+      <div className="msg-modal">
+        <div className="msg-modal-head">
+          <h3>New Message</h3>
+          <button onClick={onClose} className="msg-modal-close"><X size={20} /></button>
         </div>
-        <div style={{ padding:'12px 16px' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, background:'#111', border:'1px solid #222', borderRadius:10, padding:'9px 12px', marginBottom:12 }}>
-            <Search size={15} color="#555" />
-            <input autoFocus value={q} onChange={e=>setQ(e.target.value)}
-              placeholder="Search celebrities or fans..."
-              style={{ flex:1, background:'transparent', border:'none', outline:'none', color:'#fff', fontSize:14, fontFamily:'inherit' }} />
+        <div className="msg-modal-body">
+          <div className="msg-search" style={{ marginBottom: 12 }}>
+            <Search size={15} color="var(--sm-text-faint)" />
+            <input autoFocus value={q} onChange={e => setQ(e.target.value)}
+              placeholder="Search celebrities or fans..." />
           </div>
           {q.length < 2 && (
-            <div style={{ color:'#555', fontSize:13, textAlign:'center', padding:'20px 0' }}>Type to search celebrities and fans</div>
+            <div className="msg-modal-hint">Type to search celebrities and fans</div>
           )}
           {results.map(r => (
-            <div key={`${r.type}_${r.id}`} onClick={()=>onSelect(r)}
-              style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 6px', cursor:'pointer', borderRadius:10, transition:'background 0.1s' }}
-              onMouseEnter={e=>e.currentTarget.style.background='#111'}
-              onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-              <div style={{ position:'relative', flexShrink:0 }}>
-                <img src={r.image||av(r.name)} alt="" style={{ width:44, height:44, borderRadius:'50%', objectFit:'cover', objectPosition:'top' }}
-                  onError={e=>{e.currentTarget.src=av(r.name)}} />
+            <div key={`${r.type}_${r.id}`} onClick={() => onSelect(r)} className="msg-modal-result">
+              <div className="msg-convo-avatar-wrap">
+                <img src={r.image || av(r.name)} alt=""
+                  onError={e => { e.currentTarget.src = av(r.name); }} />
                 {r.verified && (
-                  <div style={{ position:'absolute', bottom:0, right:0, width:16, height:16, borderRadius:'50%', background:'#3b82f6', border:'2px solid #0a0a0a', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <div className="msg-verified">
                     <Check size={8} strokeWidth={3} color="white" />
                   </div>
                 )}
               </div>
               <div>
-                <div style={{ fontSize:14, fontWeight:600, color:'#fff' }}>{r.name}</div>
-                <div style={{ fontSize:12, color:'#555' }}>{r.sub}</div>
+                <div className="msg-modal-result-name">{r.name}</div>
+                <div className="msg-modal-result-sub">{r.sub}</div>
               </div>
             </div>
           ))}
@@ -362,48 +360,45 @@ function ChatWindow({ convo, myId, onSend, onBack, typing: typingExternal, isPro
   const lastMyMsg  = myMessages[myMessages.length - 1];
 
   return (
-    <div style={{ flex:1, display:'flex', flexDirection:'column', height:'100%' }}>
-      {/* Header */}
-      <div style={{ padding:'12px 16px', borderBottom:'1px solid #111', display:'flex', alignItems:'center', gap:10, flexShrink:0, background:'#000' }}>
-        <button onClick={onBack} style={{ background:'none', border:'none', color:'#aaa', cursor:'pointer', lineHeight:0, marginRight:4 }}>
-          <ChevronLeft size={22}/>
+    <div className="msg-chat">
+      <div className="msg-chat-head">
+        <button onClick={onBack} className="msg-back-btn">
+          <ChevronLeft size={22} />
         </button>
-        <Link to={them.type==='celeb' ? `/celebrity/${them.id}` : `/user/${them.id}`}
-          style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:10, flex:1 }}>
-          <div style={{ position:'relative', flexShrink:0 }}>
-            <img src={them.image||av(them.name)} alt="" style={{ width:40, height:40, borderRadius:'50%', objectFit:'cover', objectPosition:'top' }}
-              onError={e=>{e.currentTarget.src=av(them.name)}} />
+        <Link to={them.type === 'celeb' ? celebPath(them) : `/user/${them.id}`}
+          className="msg-chat-profile">
+          <div className="msg-chat-avatar-wrap">
+            <img src={them.image || av(them.name)} alt="" className="msg-chat-avatar"
+              onError={e => { e.currentTarget.src = av(them.name); }} />
             {them.verified && (
-              <div style={{ position:'absolute', bottom:0, right:0, width:14, height:14, borderRadius:'50%', background:'#3b82f6', border:'2px solid #000', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <Check size={7} strokeWidth={3} color="white"/>
+              <div className="msg-verified">
+                <Check size={7} strokeWidth={3} color="white" />
               </div>
             )}
-            {/* Online dot */}
-            <div style={{ position:'absolute', top:0, right:0, width:11, height:11, borderRadius:'50%', background:'#22c55e', border:'2px solid #000' }} />
+            <div className="msg-chat-online-lg" />
           </div>
           <div>
-            <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{them.name}</div>
-            <div style={{ fontSize:11, color:'#22c55e', fontWeight:500 }}>Online now</div>
+            <div className="msg-chat-name">{them.name}</div>
+            <div className="msg-chat-status">Online now</div>
           </div>
         </Link>
         {isRequest && (
-          <span style={{ fontSize:11, color:'#f59e0b', background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:999, padding:'3px 10px', display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
-            <Clock size={11}/> Request
+          <span className="msg-request-badge">
+            <Clock size={11} /> Request
           </span>
         )}
       </div>
 
-      {/* Messages */}
-      <div style={{ flex:1, overflowY:'auto', padding:'16px 14px', display:'flex', flexDirection:'column', gap:6 }}>
+      <div className="msg-body">
         {msgs.length === 0 && (
-          <div style={{ textAlign:'center', padding:'40px 0', color:'#555' }}>
-            <div style={{ position:'relative', width:72, height:72, margin:'0 auto 14px', borderRadius:'50%', overflow:'hidden', border:'2px solid #1a1a1a' }}>
-              <img src={them.image||av(them.name)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top' }}
-                onError={e=>{e.currentTarget.src=av(them.name)}} />
+          <div className="msg-empty-chat">
+            <div className="msg-empty-chat-avatar">
+              <img src={them.image || av(them.name)} alt=""
+                onError={e => { e.currentTarget.src = av(them.name); }} />
             </div>
-            <div style={{ fontSize:15, fontWeight:700, color:'#ccc', marginBottom:4 }}>{them.name}</div>
-            <div style={{ fontSize:12, color:'#444', marginBottom:4 }}>{them.category || ''}</div>
-            <div style={{ fontSize:12, color:'#333' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--sm-text-secondary)', marginBottom: 4 }}>{them.name}</div>
+            <div style={{ fontSize: 12, color: 'var(--sm-text-faint)', marginBottom: 4 }}>{them.category || ''}</div>
+            <div style={{ fontSize: 12, color: '#333' }}>
               {them.verified ? '✦ Verified celebrity · Online now' : 'Start your conversation below'}
             </div>
           </div>
@@ -412,42 +407,32 @@ function ChatWindow({ convo, myId, onSend, onBack, typing: typingExternal, isPro
         {msgs.map((msg, msgIdx) => {
           const isLast = msgIdx === msgs.length - 1;
           return (
-            <div key={msg.id} style={{ display:'flex', justifyContent: msg.from==='me' ? 'flex-end' : msg.from==='system' ? 'center' : 'flex-start' }}>
+            <div key={msg.id} className={`msg-row ${msg.from === 'me' ? 'me' : msg.from === 'system' ? 'system' : 'them'}`}>
               {msg.from === 'system' ? (
-                <div style={{ background:'#111', border:'1px solid #1a1a1a', borderRadius:10, padding:'8px 14px', maxWidth:'85%', fontSize:12, color:'#666', display:'flex', alignItems:'center', gap:6 }}>
-                  <Lock size={11} color="#444"/> {msg.text}
+                <div className="msg-system">
+                  <Lock size={11} /> {msg.text}
                 </div>
               ) : (
-                <div style={{ maxWidth:'74%' }}>
+                <div className="msg-bubble-wrap">
                   {msg.from !== 'me' && (
-                    <div style={{ marginBottom:2 }}>
-                      <img src={them.image||av(them.name)} alt="" style={{ width:24, height:24, borderRadius:'50%', objectFit:'cover', objectPosition:'top', flexShrink:0 }}
-                        onError={e=>{e.currentTarget.src=av(them.name)}} />
-                    </div>
+                    <img src={them.image || av(them.name)} alt="" className="msg-bubble-avatar"
+                      onError={e => { e.currentTarget.src = av(them.name); }} />
                   )}
-                  <div style={{
-                    background:    msg.from==='me' ? '#3b82f6' : '#1a1a1a',
-                    borderRadius:  msg.from==='me' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                    padding:       msg.media ? '4px' : '10px 14px',
-                    marginLeft:    msg.from!=='me' ? 0 : 0,
-                  }}>
-                    {msg.media && <img src={msg.media} alt="" style={{ width:'100%', maxWidth:240, borderRadius:12, display:'block' }} />}
-                    {msg.text && <div style={{ fontSize:14, color:'#fff', lineHeight:1.55, padding: msg.media?'6px 8px 4px':0 }}>{msg.text}</div>}
-                    <div style={{ fontSize:10, color: msg.from==='me'?'rgba(255,255,255,0.45)':'#444', textAlign:'right', marginTop: msg.media?0:3 }}>
-                      {fmtTime(msg.timestamp)}
-                    </div>
+                  <div className={`msg-bubble ${msg.from}${msg.media ? ' media' : ''}`}>
+                    {msg.media && <img src={msg.media} alt="" />}
+                    {msg.text && <div style={{ padding: msg.media ? '6px 8px 4px' : 0 }}>{msg.text}</div>}
+                    <div className={`msg-bubble-time ${msg.from}`}>{fmtTime(msg.timestamp)}</div>
                   </div>
-                  {/* Read receipt — shown under last "me" message */}
                   {msg.from === 'me' && isLast && seenMsgId === 'latest' && (
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:3, marginTop:3 }}>
-                      <CheckCheck size={13} color="#3b82f6" />
-                      <span style={{ fontSize:10, color:'#3b82f6' }}>Seen by {them.name?.split(' ')[0]}</span>
+                    <div className="msg-receipt seen">
+                      <CheckCheck size={13} />
+                      <span>Seen by {them.name?.split(' ')[0]}</span>
                     </div>
                   )}
                   {msg.from === 'me' && isLast && seenMsgId !== 'latest' && (
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:3, marginTop:3 }}>
-                      <Check size={13} color="#555" />
-                      <span style={{ fontSize:10, color:'#555' }}>Sent</span>
+                    <div className="msg-receipt sent">
+                      <Check size={13} />
+                      <span>Sent</span>
                     </div>
                   )}
                 </div>
@@ -457,61 +442,49 @@ function ChatWindow({ convo, myId, onSend, onBack, typing: typingExternal, isPro
         })}
 
         {typingExternal && (
-          <div style={{ display:'flex', alignItems:'flex-end', gap:6 }}>
-            <img src={them.image||av(them.name)} alt="" style={{ width:24, height:24, borderRadius:'50%', objectFit:'cover', objectPosition:'top', flexShrink:0 }}
-              onError={e=>{e.currentTarget.src=av(them.name)}} />
-            <TypingBubble/>
+          <div className="msg-typing-row">
+            <img src={them.image || av(them.name)} alt="" className="msg-bubble-avatar"
+              onError={e => { e.currentTarget.src = av(them.name); }} />
+            <TypingBubble />
           </div>
         )}
-        <div ref={bottomRef}/>
+        <div ref={bottomRef} />
       </div>
 
-      {/* Emoji picker */}
       {showEmoji && (
-        <div style={{ padding:'10px 14px', borderTop:'1px solid #111', display:'flex', flexWrap:'wrap', gap:6, background:'#000' }}>
+        <div className="msg-emoji-bar">
           {EMOJIS.map(e => (
-            <button key={e} onClick={()=>setInput(i=>i+e)}
-              style={{ background:'none', border:'none', cursor:'pointer', fontSize:22, padding:'2px 4px', lineHeight:1 }}>
-              {e}
-            </button>
+            <button key={e} onClick={() => setInput(i => i + e)} className="msg-emoji-btn">{e}</button>
           ))}
         </div>
       )}
 
-      {/* Free messages warning */}
       {!isPro && them.type === 'celeb' && msgCount >= freeLimit - 2 && msgCount < freeLimit && (
-        <div style={{ padding:'8px 14px', background:'#1a0f00', borderTop:'1px solid #2a1800', display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, flexShrink:0 }}>
-          <span style={{ fontSize:12, color:'#f59e0b' }}>
+        <div className="msg-limit-bar">
+          <span>
             ⚡ {freeLimit - msgCount} free message{freeLimit - msgCount !== 1 ? 's' : ''} left with {them.name?.split(' ')[0]}
           </span>
-          <button onClick={onUpgradeClick} style={{ background:'#f59e0b', border:'none', borderRadius:6, color:'#000', fontSize:11, fontWeight:800, padding:'4px 10px', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-            Upgrade
-          </button>
+          <button onClick={onUpgradeClick} className="msg-limit-upgrade">Upgrade</button>
         </div>
       )}
 
-      {/* Input bar */}
-      <div style={{ padding:'10px 14px 16px', borderTop:'1px solid #111', display:'flex', gap:8, alignItems:'center', flexShrink:0, background:'#000' }}>
-        <button onClick={()=>setShowEmoji(s=>!s)} style={{ background:'none', border:'none', cursor:'pointer', color: showEmoji?'#3b82f6':'#555', lineHeight:0, flexShrink:0 }}>
-          <Smile size={22}/>
+      <div className="msg-input-bar">
+        <button onClick={() => setShowEmoji(s => !s)} className={`msg-input-icon${showEmoji ? ' active' : ''}`}>
+          <Smile size={22} />
         </button>
-        <button onClick={()=>fileRef.current?.click()} style={{ background:'none', border:'none', cursor:'pointer', color:'#555', lineHeight:0, flexShrink:0 }}>
-          <Image size={22}/>
+        <button onClick={() => fileRef.current?.click()} className="msg-input-icon">
+          <Image size={22} />
         </button>
-        <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleFile}/>
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFile} />
         <input
           value={input}
-          onChange={e=>setInput(e.target.value)}
+          onChange={e => setInput(e.target.value)}
           onKeyDown={handleKey}
           placeholder={`Message ${them.name?.split(' ')[0] || 'them'}...`}
-          style={{ flex:1, background:'#111', border:'1px solid #1a1a1a', borderRadius:24, padding:'11px 18px', color:'#fff', fontSize:14, outline:'none', fontFamily:'inherit' }}
+          className="msg-input"
         />
-        <button onClick={()=>send(input)} style={{
-          width:42, height:42, borderRadius:'50%', flexShrink:0,
-          background: input.trim() ? '#3b82f6' : '#1a1a1a',
-          border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.15s',
-        }}>
-          <Send size={17} color="#fff"/>
+        <button onClick={() => send(input)} className={`msg-send-btn${input.trim() ? ' active' : ' inactive'}`}>
+          <Send size={17} color="#fff" />
         </button>
       </div>
     </div>
@@ -531,59 +504,50 @@ function UpgradeModal({ celebName, onClose, onUpgrade, isPro: alreadyPro }) {
     // If sentToStripe === true, the page will redirect; modal stays open briefly
   }
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.92)', zIndex:4000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
-      onClick={onClose}>
-      <div style={{ background:'#0a0a0a', border:'1px solid #2a2a2a', borderRadius:20, width:'100%', maxWidth:420, overflow:'hidden' }}
-        onClick={e => e.stopPropagation()}>
-        {/* Header gradient */}
-        <div style={{ background:'linear-gradient(135deg,#1e3a5f,#2d1b69)', padding:'28px 24px 22px', textAlign:'center' }}>
-          <div style={{ fontSize:40, marginBottom:8 }}>⭐</div>
-          <div style={{ fontSize:20, fontWeight:800, color:'#fff', marginBottom:6 }}>Unlock Unlimited Messages</div>
-          <div style={{ fontSize:14, color:'#93c5fd', lineHeight:1.5 }}>
-            You've used your {FREE_MSG_LIMIT} free messages with <strong>{celebName}</strong>.<br/>Upgrade to keep the conversation going.
-          </div>
+    <div className="msg-upgrade-overlay" onClick={onClose}>
+      <div className="msg-upgrade" onClick={e => e.stopPropagation()}>
+        <div className="msg-upgrade-hero">
+          <div style={{ fontSize: 40, marginBottom: 8 }}>⭐</div>
+          <h3>Unlock Unlimited Messages</h3>
+          <p>
+            You&apos;ve used your {FREE_MSG_LIMIT} free messages with <strong>{celebName}</strong>.<br />
+            Upgrade to keep the conversation going.
+          </p>
         </div>
-        {/* Plans */}
-        <div style={{ padding:'20px 24px' }}>
-          {/* Pro plan */}
-          <div style={{ background:'#0f1e3a', border:'2px solid #3b82f6', borderRadius:14, padding:'16px 18px', marginBottom:12, position:'relative' }}>
-            <div style={{ position:'absolute', top:-10, right:16, background:'#3b82f6', color:'#fff', fontSize:10, fontWeight:800, padding:'3px 10px', borderRadius:99, letterSpacing:'0.05em' }}>MOST POPULAR</div>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+        <div className="msg-upgrade-body">
+          <div className="msg-upgrade-plan">
+            <span className="msg-upgrade-popular">MOST POPULAR</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
               <div>
-                <div style={{ fontSize:16, fontWeight:800, color:'#fff' }}>Pro Fan</div>
-                <div style={{ fontSize:12, color:'#60a5fa' }}>Unlimited messages · All celebrities</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>Pro Fan</div>
+                <div style={{ fontSize: 12, color: '#60a5fa' }}>Unlimited messages · All celebrities</div>
               </div>
-              <div style={{ textAlign:'right' }}>
-                <div style={{ fontSize:22, fontWeight:800, color:'#fff' }}>$9</div>
-                <div style={{ fontSize:11, color:'#555' }}>/month</div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>$9</div>
+                <div style={{ fontSize: 11, color: 'var(--sm-text-faint)' }}>/month</div>
               </div>
             </div>
             {['Unlimited direct messages', 'Priority replies from celebrities', 'Pro badge on your profile', 'Exclusive celebrity content', 'Early access to new features'].map(f => (
-              <div key={f} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5 }}>
-                <div style={{ width:16, height:16, borderRadius:'50%', background:'#3b82f6', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              <div key={f} className="msg-upgrade-feature">
+                <div className="msg-upgrade-check">
+                  <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" /></svg>
                 </div>
-                <span style={{ fontSize:13, color:'#ccc' }}>{f}</span>
+                {f}
               </div>
             ))}
-            <button onClick={() => handleUpgrade('pro')} style={{
-              width:'100%', marginTop:14, padding:'13px', background:'#3b82f6',
-              border:'none', borderRadius:10, color:'#fff',
-              fontSize:14, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
-            }}>
+            <button onClick={() => handleUpgrade('pro')} className="msg-upgrade-cta">
               Upgrade to Pro — $9/mo →
             </button>
           </div>
-          {/* Celebrity plan */}
-          <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:14, padding:'14px 18px', marginBottom:16 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
-              <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>Celebrity 🌟</div>
-              <div><span style={{ fontSize:18, fontWeight:800, color:'#fff' }}>$29</span><span style={{ fontSize:11, color:'#555' }}>/mo</span></div>
+          <div className="msg-upgrade-secondary">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>Celebrity 🌟</div>
+              <div><span style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>$29</span><span style={{ fontSize: 11, color: 'var(--sm-text-faint)' }}>/mo</span></div>
             </div>
-            <div style={{ fontSize:12, color:'#555' }}>Everything in Pro + verified celebrity badge + direct fan inbox</div>
+            <div style={{ fontSize: 12, color: 'var(--sm-text-faint)' }}>Everything in Pro + verified celebrity badge + direct fan inbox</div>
           </div>
-          <button onClick={onClose} style={{ width:'100%', padding:'11px', background:'none', border:'1px solid #1a1a1a', borderRadius:10, color:'#555', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
-            Maybe later — I'll use my remaining free messages
+          <button onClick={onClose} className="msg-upgrade-dismiss">
+            Maybe later — I&apos;ll use my remaining free messages
           </button>
         </div>
       </div>
@@ -754,113 +718,81 @@ export default function Messages() {
   const totalUnread = Object.keys(unreadIds).length;
 
   return (
-    <div style={{ background:'#000', height:'calc(100vh - 56px)', display:'flex', overflow:'hidden', fontFamily:'Inter,system-ui,sans-serif', color:'#fff' }}>
+    <div className="msg-page">
 
-      {/* ── Sidebar ── */}
-      <div style={{
-        width: showMobile ? 0 : '100%', maxWidth:340, flexShrink:0,
-        borderRight:'1px solid #111', display:'flex', flexDirection:'column',
-        overflow: showMobile ? 'hidden' : 'visible',
-        transition:'width 0.2s',
-      }}>
-        <div style={{ padding:'16px 14px 10px', flexShrink:0, borderBottom:'1px solid #0d0d0d' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <h2 style={{ fontSize:18, fontWeight:800 }}>Messages</h2>
+      <div className={`msg-sidebar${showMobile ? ' hidden' : ''}`}>
+        <div className="msg-sidebar-head">
+          <div className="msg-sidebar-top">
+            <div className="msg-sidebar-title">
+              <h2 style={{ fontSize: 18, fontWeight: 800 }}>Messages</h2>
               {totalUnread > 0 && (
-                <div style={{ background:'#e05252', borderRadius:999, minWidth:20, height:20, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 5px' }}>
-                  <span style={{ fontSize:11, fontWeight:800, color:'#fff' }}>{totalUnread}</span>
-                </div>
+                <span className="msg-unread-badge">{totalUnread}</span>
               )}
             </div>
-            <button onClick={()=>setShowNew(true)} style={{
-              background:'#3b82f6', border:'none', borderRadius:8, color:'#fff',
-              fontSize:13, fontWeight:600, padding:'6px 14px', cursor:'pointer', fontFamily:'inherit',
-              display:'flex', alignItems:'center', gap:5,
-            }}>
-              <span style={{ fontSize:16, lineHeight:1 }}>+</span> New
+            <button onClick={() => setShowNew(true)} className="msg-new-btn">
+              <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> New
             </button>
           </div>
 
-          {/* Real search — not a fake open-modal trigger */}
-          <div style={{ display:'flex', alignItems:'center', gap:8, background:'#0d0d0d', border:'1px solid #1a1a1a', borderRadius:10, padding:'8px 12px' }}>
-            <Search size={15} color="#555"/>
-            <input placeholder="Search conversations..."
-              style={{ flex:1, background:'transparent', border:'none', outline:'none', color:'#fff', fontSize:13, fontFamily:'inherit' }}
-              onChange={e => {
-                // Filter convos by name in real time
-              }} />
+          <div className="msg-search">
+            <Search size={15} color="var(--sm-text-faint)" />
+            <input placeholder="Search conversations..." />
           </div>
         </div>
 
-        <div style={{ flex:1, overflowY:'auto' }}>
+        <div className="msg-convo-list">
           {sortedConvos.length === 0 ? (
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', padding:24, textAlign:'center' }}>
-              <div style={{ width:64, height:64, borderRadius:'50%', background:'#111', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:14 }}>
-                <MessageCircle size={28} color="#333"/>
+            <div className="msg-empty-sidebar">
+              <div className="msg-empty-icon-wrap">
+                <MessageCircle size={28} color="#333" />
               </div>
-              <div style={{ fontSize:16, fontWeight:600, color:'#888', marginBottom:6 }}>No messages yet</div>
-              <div style={{ fontSize:13, color:'#555', marginBottom:18 }}>Start a conversation with a celebrity.</div>
-              <button onClick={()=>setShowNew(true)} style={{ background:'#3b82f6', border:'none', borderRadius:10, color:'#fff', fontSize:14, fontWeight:600, padding:'11px 24px', cursor:'pointer', fontFamily:'inherit' }}>
+              <div className="msg-empty-title">No messages yet</div>
+              <div className="msg-empty-text">Start a conversation with a celebrity.</div>
+              <button onClick={() => setShowNew(true)} className="msg-new-btn" style={{ padding: '11px 24px' }}>
                 Message a celebrity
               </button>
             </div>
           ) : (
             sortedConvos.map(convo => {
-              const them     = convo.with;
-              const lastMsg  = convo.messages.filter(m=>m.from!=='system').slice(-1)[0];
+              const them = convo.with;
+              const lastMsg = convo.messages.filter(m => m.from !== 'system').slice(-1)[0];
               const isActive = convo.id === activeId;
               const hasUnread = unreadIds[convo.id];
 
               return (
                 <div key={convo.id}
                   onClick={() => {
-                    setUnreadIds(prev => { const n={...prev}; delete n[convo.id]; return n; });
+                    setUnreadIds(prev => { const n = { ...prev }; delete n[convo.id]; return n; });
                     setActiveId(convo.id);
                     setShowMobile(true);
                     refreshConvos();
                   }}
-                  style={{
-                    display:'flex', gap:10, padding:'12px 14px', cursor:'pointer',
-                    background: isActive ? '#0d0d0d' : 'transparent',
-                    borderBottom:'1px solid #080808', transition:'background 0.1s',
-                    position:'relative',
-                  }}
-                  onMouseEnter={e=>{ if(!isActive) e.currentTarget.style.background='#080808'; }}
-                  onMouseLeave={e=>{ if(!isActive) e.currentTarget.style.background='transparent'; }}>
+                  className={`msg-convo${isActive ? ' active' : ''}`}>
 
-                  {/* Unread indicator */}
-                  {hasUnread && (
-                    <div style={{ position:'absolute', left:6, top:'50%', transform:'translateY(-50%)', width:7, height:7, borderRadius:'50%', background:'#3b82f6' }} />
-                  )}
+                  {hasUnread && <div className="msg-convo-unread-dot" />}
 
-                  <div style={{ position:'relative', flexShrink:0 }}>
-                    <img src={them.image||av(them.name)} alt="" style={{ width:50, height:50, borderRadius:'50%', objectFit:'cover', objectPosition:'top' }}
-                      onError={e=>{e.currentTarget.src=av(them.name)}}/>
+                  <div className="msg-convo-avatar-wrap">
+                    <img src={them.image || av(them.name)} alt="" className="msg-convo-avatar"
+                      onError={e => { e.currentTarget.src = av(them.name); }} />
                     {them.verified && (
-                      <div style={{ position:'absolute', bottom:0, right:0, width:16, height:16, borderRadius:'50%', background:'#3b82f6', border:'2px solid #000', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <Check size={8} strokeWidth={3} color="white"/>
+                      <div className="msg-verified">
+                        <Check size={8} strokeWidth={3} color="white" />
                       </div>
                     )}
-                    {/* Online dot */}
-                    {them.verified && (
-                      <div style={{ position:'absolute', top:1, right:1, width:10, height:10, borderRadius:'50%', background:'#22c55e', border:'2px solid #000' }} />
-                    )}
+                    {them.verified && <div className="msg-online" />}
                   </div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:3 }}>
-                      <span style={{ fontSize:14, fontWeight: hasUnread ? 800 : 600, color: hasUnread ? '#fff' : '#ccc' }}>{them.name}</span>
-                      <span style={{ fontSize:11, color:'#444' }}>{fmtTime(convo.updatedAt)}</span>
+                  <div className="msg-convo-body">
+                    <div className="msg-convo-row">
+                      <span className={`msg-convo-name${hasUnread ? ' unread' : ''}`}>{them.name}</span>
+                      <span className="msg-convo-time">{fmtTime(convo.updatedAt)}</span>
                     </div>
-                    <div style={{ fontSize:12, color: hasUnread ? '#aaa' : '#555', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    <div className={`msg-convo-preview${hasUnread ? ' unread' : ''}${typingConvoId === convo.id ? ' typing' : ''}`}>
                       {typingConvoId === convo.id
-                        ? <span style={{ color:'#22c55e', fontStyle:'italic' }}>typing...</span>
-                        : lastMsg?.media ? '📷 Photo' : (lastMsg?.text?.slice(0,42) || 'Start chatting...')}
+                        ? 'typing...'
+                        : lastMsg?.media ? '📷 Photo' : (lastMsg?.text?.slice(0, 42) || 'Start chatting...')}
                     </div>
                   </div>
-                  {hasUnread && (
-                    <div style={{ width:9, height:9, borderRadius:'50%', background:'#3b82f6', flexShrink:0, alignSelf:'center' }} />
-                  )}
+                  {hasUnread && <div className="msg-convo-badge" />}
                 </div>
               );
             })
@@ -868,14 +800,13 @@ export default function Messages() {
         </div>
       </div>
 
-      {/* ── Chat area ── */}
-      <div style={{ flex:1, display: (!showMobile && typeof window !== 'undefined' && window.innerWidth < 640) ? 'none' : 'flex', flexDirection:'column', minWidth:0 }}>
+      <div className={`msg-chat-area${!showMobile && typeof window !== 'undefined' && window.innerWidth < 640 ? ' mobile-hidden' : ''}`}>
         {!activeConvo ? (
-          <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'#555', gap:10 }}>
-            <MessageCircle size={44} color="#1a1a1a"/>
-            <div style={{ fontSize:16, fontWeight:600, color:'#777' }}>Your messages</div>
-            <div style={{ fontSize:13, color:'#444', maxWidth:200, textAlign:'center', lineHeight:1.6 }}>Message a celebrity directly. They reply personally.</div>
-            <button onClick={()=>setShowNew(true)} style={{ background:'#3b82f6', border:'none', borderRadius:12, color:'#fff', fontSize:14, fontWeight:600, padding:'11px 24px', cursor:'pointer', fontFamily:'inherit', marginTop:8 }}>
+          <div className="msg-chat-empty">
+            <MessageCircle size={44} color="var(--sm-border)" />
+            <div className="msg-chat-empty-title">Your messages</div>
+            <div className="msg-chat-empty-text">Message a celebrity directly. They reply personally.</div>
+            <button onClick={() => setShowNew(true)} className="msg-new-btn" style={{ padding: '11px 24px', marginTop: 8 }}>
               Start a conversation
             </button>
           </div>
@@ -884,7 +815,7 @@ export default function Messages() {
             convo={activeConvo}
             myId={myId}
             onSend={handleSend}
-            onBack={()=>{ setShowMobile(false); setActiveId(null); }}
+            onBack={() => { setShowMobile(false); setActiveId(null); }}
             typing={typingConvoId === activeConvo.id}
             isPro={isPro}
             msgCount={getMessageCount(activeConvo.with?.id)}
