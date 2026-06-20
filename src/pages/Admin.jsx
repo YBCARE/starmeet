@@ -11,6 +11,7 @@ import { useAdmin } from '../context/AdminContext';
 import { useAuth } from '../context/AuthContext';
 import { useFanPosts } from '../context/FanPostContext';
 import { loadAll, saveAll, appendMessage, updateConvoStatus, uid as msUid } from '../services/messageStore';
+import './Admin.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtNum(n) {
@@ -26,7 +27,7 @@ const s = { // shared inline styles
   card:    { background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:20 },
   input:   { width:'100%', background:'#111', border:'1px solid #222', borderRadius:8, padding:'9px 12px', color:'#fff', fontSize:13, outline:'none', fontFamily:'inherit', boxSizing:'border-box', display:'block' },
   label:   { fontSize:12, color:'#666', fontWeight:600, marginBottom:5, display:'block' },
-  btn:     (bg='#3b82f6') => ({ background:bg, border:'none', borderRadius:8, color:'#fff', fontSize:13, fontWeight:600, padding:'9px 16px', cursor:'pointer', fontFamily:'inherit', display:'inline-flex', alignItems:'center', gap:6 }),
+  btn:     (bg='#0095f6') => ({ background:bg, border:'none', borderRadius:8, color:'#fff', fontSize:13, fontWeight:600, padding:'9px 16px', cursor:'pointer', fontFamily:'inherit', display:'inline-flex', alignItems:'center', gap:6 }),
   btnGhost:{ background:'transparent', border:'1px solid #222', borderRadius:8, color:'#888', fontSize:13, padding:'8px 14px', cursor:'pointer', fontFamily:'inherit', display:'inline-flex', alignItems:'center', gap:5 },
 };
 
@@ -45,10 +46,10 @@ function AdminLogin() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:'#000', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter,system-ui,sans-serif' }}>
-      <div style={{ width:'100%', maxWidth:380, border:'1px solid #1a1a1a', borderRadius:20, padding:'36px 28px', background:'#050505' }}>
+    <div className="sm-admin-login">
+      <div className="sm-admin-login-card">
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:28 }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:'#3b82f6', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div className="sm-admin-login-icon">
             <Shield size={18} color="white" />
           </div>
           <div>
@@ -94,7 +95,7 @@ function Sidebar({ active, setActive, onLogout }) {
     <div style={{ width:220, flexShrink:0, background:'#050505', borderRight:'1px solid #111', display:'flex', flexDirection:'column', height:'100vh', position:'sticky', top:0 }}>
       <div style={{ padding:'20px 16px 14px', borderBottom:'1px solid #111' }}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ width:30, height:30, borderRadius:8, background:'#3b82f6', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ width:30, height:30, borderRadius:8, background:'#0095f6', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <Shield size={15} color="white" />
           </div>
           <div>
@@ -131,7 +132,7 @@ function Dashboard({ celebrities, fans, fanPosts, adminPosts, overrides }) {
   const totalLikes = [...fanPosts, ...adminPosts].reduce((a,p)=>a+(p.likes||0),0);
 
   const stats = [
-    { label:'Total Celebrities', val: fmtNum(liveCelebs.length), icon:Star,          color:'#3b82f6', sub:'Wikipedia + admin added' },
+    { label:'Total Celebrities', val: fmtNum(liveCelebs.length), icon:Star,          color:'#0095f6', sub:'Wikipedia + admin added' },
     { label:'Registered Fans',   val: fmtNum(fans.length),       icon:Users,         color:'#8b5cf6', sub:'Active accounts' },
     { label:'Total Posts',       val: fmtNum(fanPosts.length + adminPosts.length), icon:Film, color:'#10b981', sub:'Fan + admin posts' },
     { label:'Total Likes',       val: fmtNum(totalLikes),        icon:Heart,         color:'#e05252', sub:'Across all posts' },
@@ -158,7 +159,7 @@ function Dashboard({ celebrities, fans, fanPosts, adminPosts, overrides }) {
       <h2 style={{ fontSize:16, fontWeight:700, color:'#fff', marginBottom:12 }}>Quick Actions</h2>
       <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
         {[
-          { label:'Add Celebrity', color:'#3b82f6', icon:Plus },
+          { label:'Add Celebrity', color:'#0095f6', icon:Plus },
           { label:'Create Post',   color:'#8b5cf6', icon:Film },
           { label:'View Fans',     color:'#10b981', icon:Users },
           { label:'Settings',      color:'#f59e0b', icon:Settings },
@@ -288,7 +289,7 @@ function CelebrityManagement({ celebrities, overrides, addedCelebs, updateCeleb,
                   <td style={{ padding:'10px 16px', color:'#aaa' }}>{fmtNum(parseInt(c.followers)||0)}</td>
                   <td style={{ padding:'10px 16px' }}>
                     <button onClick={()=>updateCeleb(c.id,{verified:!c.verified})} style={{ background:'none', border:'none', cursor:'pointer', padding:0 }}>
-                      {c.verified!==false ? <ToggleRight size={22} color="#3b82f6"/> : <ToggleLeft size={22} color="#333"/>}
+                      {c.verified!==false ? <ToggleRight size={22} color="#0095f6"/> : <ToggleLeft size={22} color="#333"/>}
                     </button>
                   </td>
                   <td style={{ padding:'10px 16px' }}>
@@ -341,7 +342,7 @@ function CelebrityManagement({ celebrities, overrides, addedCelebs, updateCeleb,
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <label style={{ ...s.label, marginBottom:0 }}>Verified badge</label>
               <button onClick={()=>setEditForm(p=>({...p,verified:!p.verified}))} style={{ background:'none', border:'none', cursor:'pointer', padding:0 }}>
-                {editForm.verified ? <ToggleRight size={24} color="#3b82f6"/> : <ToggleLeft size={24} color="#333"/>}
+                {editForm.verified ? <ToggleRight size={24} color="#0095f6"/> : <ToggleLeft size={24} color="#333"/>}
               </button>
             </div>
             <div style={{ display:'flex', gap:10, marginTop:4 }}>
@@ -379,7 +380,7 @@ function CelebrityManagement({ celebrities, overrides, addedCelebs, updateCeleb,
               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                 <label style={{ ...s.label, marginBottom:0 }}>Verified</label>
                 <button type="button" onClick={()=>setAddForm(p=>({...p,verified:!p.verified}))} style={{ background:'none', border:'none', cursor:'pointer', padding:0 }}>
-                  {addForm.verified ? <ToggleRight size={24} color="#3b82f6"/> : <ToggleLeft size={24} color="#333"/>}
+                  {addForm.verified ? <ToggleRight size={24} color="#0095f6"/> : <ToggleLeft size={24} color="#333"/>}
                 </button>
               </div>
             </div>
@@ -990,7 +991,7 @@ function AdminMessages({ celebrities }) {
         {[['all',`All Active (${active.length})`],['requests',`Requests (${requests.length})`],['broadcast','Broadcast']].map(([k,l]) => (
           <button key={k} onClick={()=>setTab(k)} style={{
             padding:'7px 16px', borderRadius:8, border:'none', cursor:'pointer', fontFamily:'inherit', fontSize:13, fontWeight:600,
-            background: tab===k ? '#3b82f6' : '#1a1a1a', color: tab===k ? '#fff' : '#666',
+            background: tab===k ? '#0095f6' : '#1a1a1a', color: tab===k ? '#fff' : '#666',
           }}>{l}</button>
         ))}
         <button onClick={refresh} style={{ ...s.btnGhost, marginLeft:'auto', padding:'7px 12px' }}><RefreshCw size={13}/></button>
@@ -1095,7 +1096,7 @@ function AdminMessages({ celebrities }) {
 
                 {/* Reply as celebrity */}
                 <div style={{ padding:'10px 14px', borderTop:'1px solid #111' }}>
-                  <div style={{ fontSize:11, color:'#3b82f6', fontWeight:600, marginBottom:6 }}>
+                  <div style={{ fontSize:11, color:'#0095f6', fontWeight:600, marginBottom:6 }}>
                     Reply as {activeConvo.with?.name} (celebrity)
                   </div>
                   <div style={{ display:'flex', gap:8 }}>
@@ -1139,7 +1140,7 @@ export default function Admin() {
   const allCelebs = [...addedCelebs, ...celebrities];
 
   return (
-    <div style={{ display:'flex', minHeight:'100vh', background:'#000', fontFamily:'Inter,system-ui,sans-serif', color:'#fff' }}>
+    <div className="sm-admin" style={{ display:'flex', minHeight:'100vh' }}>
       <Sidebar active={section} setActive={setSection} onLogout={adminLogout} />
       <main style={{ flex:1, padding:28, overflowY:'auto' }}>
         {section==='dashboard'   && <Dashboard celebrities={allCelebs} fans={fansDb} fanPosts={fanPosts} adminPosts={adminPosts} overrides={overrides} />}

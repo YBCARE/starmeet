@@ -3,7 +3,7 @@ import { Search, Check, Users, TrendingUp, Zap, Clock, ArrowUpDown, X } from 'lu
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useCelebContext } from '../context/CelebContext';
 import { useAuth } from '../context/AuthContext';
-import { celebPath } from '../utils/celebrity';
+import { celebPath, celebDisplayImage } from '../utils/celebrity';
 
 const CATS = ['All','Actor','Actress','Musician','Director','Movie Producer','Comedian','Model','Athlete','Creator'];
 
@@ -49,8 +49,8 @@ function CelebCard({ c, index }) {
     <div className="sm-card card-glow" style={{ cursor:'pointer', position:'relative' }}>
       <Link to={celebPath(c)} style={{ textDecoration:'none', display:'block' }}>
         <div style={{ aspectRatio:'3/4', overflow:'hidden', background:'#111', position:'relative' }}>
-          <img src={c.image} alt={c.name}
-            style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top', display:'block' }}
+          <img src={celebDisplayImage(c, 640) || av} alt={c.name}
+            style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 22%', display:'block' }}
             loading="lazy"
             onError={e => { e.currentTarget.src = av; }}
           />
@@ -89,7 +89,7 @@ function CelebCard({ c, index }) {
           )}
 
           {/* Verified badge */}
-          <div style={{ position:'absolute', top:8, right:8, width:22, height:22, borderRadius:'50%', background: c.isMemorial ? '#92400e' : '#3b82f6', display:'flex', alignItems:'center', justifyContent:'center', boxShadow: c.isMemorial ? '0 2px 8px rgba(146,64,14,0.5)' : '0 2px 8px rgba(59,130,246,0.5)' }}>
+          <div style={{ position:'absolute', top:8, right:8, width:22, height:22, borderRadius:'50%', background: c.isMemorial ? '#92400e' : '#0095f6', display:'flex', alignItems:'center', justifyContent:'center', boxShadow: c.isMemorial ? '0 2px 8px rgba(146,64,14,0.5)' : '0 2px 8px rgba(0,149,246,0.5)' }}>
             {c.isMemorial ? <span style={{ fontSize:11 }}>🕯️</span> : <Check size={11} strokeWidth={3} color="white" />}
           </div>
 
@@ -116,7 +116,7 @@ function CelebCard({ c, index }) {
         </div>
         <button onClick={() => toggleFollow(c.id)} style={{
           fontSize:11, padding:'5px 13px', borderRadius:999,
-          background: following ? '#1a1a1a' : '#3b82f6',
+          background: following ? '#1a1a1a' : '#0095f6',
           color:      following ? '#777'    : '#fff',
           border:     following ? '1px solid #333' : 'none',
           fontWeight:600, cursor:'pointer', fontFamily:'inherit',
@@ -158,7 +158,7 @@ function CelebRow({ celebrities, label, icon, labelColor }) {
               </Link>
               <button onClick={() => toggleFollow(c.id)} style={{
                 width:'100%', padding:'5px 0', borderRadius:8,
-                background: following ? '#1a1a1a' : '#3b82f6',
+                background: following ? '#1a1a1a' : '#0095f6',
                 color:      following ? '#666' : '#fff',
                 border:     following ? '1px solid #222' : 'none',
                 fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
@@ -271,7 +271,7 @@ export default function Explore() {
           <div style={{ position:'relative' }}>
             <button onClick={() => setShowSort(s=>!s)} style={{
               background: sort !== 'default' ? '#1e3a5f' : '#0d0d0d',
-              border: `1px solid ${sort !== 'default' ? '#3b82f6' : '#1a1a1a'}`,
+              border: `1px solid ${sort !== 'default' ? '#0095f6' : '#1a1a1a'}`,
               borderRadius:12, padding:'11px 14px', cursor:'pointer', color: sort !== 'default' ? '#60a5fa' : '#666',
               display:'flex', alignItems:'center', gap:6, fontFamily:'inherit', fontWeight:600, fontSize:13,
             }}>
@@ -299,7 +299,7 @@ export default function Explore() {
               <button key={c} onClick={() => setCat(c)} style={{
                 flexShrink:0, padding:'6px 14px', borderRadius:999, fontSize:13, fontWeight:600,
                 cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s',
-                background: cat === c ? '#3b82f6' : '#0d0d0d',
+                background: cat === c ? '#0095f6' : '#0d0d0d',
                 color:      cat === c ? '#fff'    : '#555',
                 border:     cat === c ? 'none'    : '1px solid #1a1a1a',
                 display:'flex', alignItems:'center', gap:5,

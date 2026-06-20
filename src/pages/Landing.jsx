@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useCelebContext } from '../context/CelebContext';
 import { celebrities as STATIC_CELEBS } from '../data/celebrities';
-import { celebPath } from '../utils/celebrity';
+import { celebPath, pickCategoryCeleb, celebDisplayImage } from '../utils/celebrity';
 import Navbar from '../components/Navbar';
 import './Landing.css';
 
@@ -23,14 +23,12 @@ const CATEGORY_DEFS = [
 function buildCategories(celebList) {
   const all = celebList?.length ? celebList : STATIC_CELEBS;
   return CATEGORY_DEFS.map(def => {
-    const celeb = all.find(c =>
-      c.category?.toLowerCase().includes(def.match.toLowerCase())
-    );
+    const celeb = pickCategoryCeleb(all, def);
     return {
       label: def.label,
       match: def.match,
       name:  celeb?.name  || def.label,
-      image: celeb?.image || null,
+      image: celeb ? celebDisplayImage(celeb, 512) : null,
       id:    celeb?.id    || null,
     };
   });
@@ -267,6 +265,7 @@ export default function Landing() {
                   <div className="landing-cat-ring">
                     <div className="landing-cat-ring-inner">
                       <img src={cat.image || fallback} alt={cat.name}
+                        loading="lazy" decoding="async"
                         onError={e => { e.currentTarget.src = fallback; }} />
                     </div>
                   </div>

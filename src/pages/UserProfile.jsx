@@ -5,7 +5,8 @@ import { Camera, Edit2, Grid3x3, Heart, MessageCircle, LogOut, Check, ChevronLef
 import { useAuth } from '../context/AuthContext';
 import { useFanPosts } from '../context/FanPostContext';
 import { useCelebContext } from '../context/CelebContext';
-import { celebPath } from '../utils/celebrity';
+import { celebPath, celebDisplayImage } from '../utils/celebrity';
+import './Profile.css';
 
 function fmtNum(n) {
   if (n >= 1_000_000) return (n/1_000_000).toFixed(1)+'M';
@@ -54,7 +55,7 @@ function EditProfileModal({ user, onSave, onClose }) {
           ))}
 
           <button onClick={()=>onSave({...form, avatar, coverPhoto:cover})} style={{
-            width:'100%', padding:12, background:'#3b82f6', border:'none', borderRadius:10,
+            width:'100%', padding:12, background:'#0095f6', border:'none', borderRadius:10,
             color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
           }}>Save Changes</button>
         </div>
@@ -88,7 +89,7 @@ export default function UserProfile() {
       <div style={{ minHeight:'100vh', background:'#000', display:'flex', alignItems:'center', justifyContent:'center', color:'#555', flexDirection:'column', gap:10 }}>
         <div style={{ fontSize:32 }}>👤</div>
         <div>User not found</div>
-        <Link to="/explore" style={{ color:'#3b82f6', textDecoration:'none' }}>Go to Explore</Link>
+        <Link to="/explore" style={{ color:'#0095f6', textDecoration:'none' }}>Go to Explore</Link>
       </div>
     );
   }
@@ -111,7 +112,7 @@ export default function UserProfile() {
   }
 
   return (
-    <div style={{ background:'#000', minHeight:'100vh', color:'#fff', fontFamily:'Inter,system-ui,sans-serif' }}>
+    <div className="sm-profile">
 
       {/* Back bar (for other profiles) */}
       {!isOwnProfile && (
@@ -143,7 +144,7 @@ export default function UserProfile() {
                   style={{ width:'100%', height:'100%', objectFit:'cover' }} />
               </div>
               {isOwnProfile && (
-                <button onClick={() => setEditing(true)} style={{ position:'absolute', bottom:0, right:0, width:24, height:24, borderRadius:'50%', background:'#3b82f6', border:'2px solid #000', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'none' }}>
+                <button onClick={() => setEditing(true)} style={{ position:'absolute', bottom:0, right:0, width:24, height:24, borderRadius:'50%', background:'#0095f6', border:'2px solid #000', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'none' }}>
                   <Camera size={11} color="white" />
                 </button>
               )}
@@ -162,7 +163,7 @@ export default function UserProfile() {
                 </>
               ) : (
                 <>
-                  <button onClick={() => toggleFanFollow(profileUser.id)} style={{ padding:'8px 20px', background: following ? '#1a1a1a' : '#3b82f6', border: following ? '1px solid #333' : 'none', borderRadius:8, color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  <button onClick={() => toggleFanFollow(profileUser.id)} style={{ padding:'8px 20px', background: following ? '#1a1a1a' : '#0095f6', border: following ? '1px solid #333' : 'none', borderRadius:8, color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                     {following ? 'Following' : 'Follow'}
                   </button>
                   <Link to={`/messages`} style={{ padding:'8px 14px', background:'#1a1a1a', border:'1px solid #333', borderRadius:8, color:'#fff', fontSize:13, fontWeight:600, textDecoration:'none', display:'flex', alignItems:'center' }}>
@@ -209,7 +210,7 @@ export default function UserProfile() {
                 <div style={{ fontSize:13, fontWeight:700, color:'#fff', marginBottom:2 }}>⭐ Upgrade to Pro</div>
                 <div style={{ fontSize:11, color:'#93c5fd' }}>Unlimited messages with any celebrity</div>
               </div>
-              <button onClick={() => upgradeToPro('pro')} style={{ padding:'8px 16px', background:'#3b82f6', border:'none', borderRadius:8, color:'#fff', fontSize:12, fontWeight:800, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+              <button onClick={() => upgradeToPro('pro')} style={{ padding:'8px 16px', background:'#0095f6', border:'none', borderRadius:8, color:'#fff', fontSize:12, fontWeight:800, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
                 $9/mo
               </button>
             </div>
@@ -242,7 +243,7 @@ export default function UserProfile() {
             <div style={{ fontSize:36, marginBottom:12 }}>📷</div>
             <div style={{ fontSize:16, fontWeight:600, color:'#888', marginBottom:8 }}>No posts yet</div>
             {isOwnProfile && (
-              <Link to="/create-post" style={{ color:'#3b82f6', textDecoration:'none', fontSize:14 }}>Share your first post →</Link>
+              <Link to="/create-post" style={{ color:'#0095f6', textDecoration:'none', fontSize:14 }}>Share your first post →</Link>
             )}
           </div>
         ) : (
@@ -270,13 +271,13 @@ export default function UserProfile() {
             <div style={{ display:'flex', alignItems:'center', gap:7, fontSize:14, fontWeight:700, color:'#fff' }}>
               <Star size={15} color="#f59e0b" fill="#f59e0b" /> Following
             </div>
-            <Link to="/explore" style={{ fontSize:12, color:'#3b82f6', textDecoration:'none', fontWeight:600 }}>Discover more →</Link>
+            <Link to="/explore" style={{ fontSize:12, color:'#0095f6', textDecoration:'none', fontWeight:600 }}>Discover more →</Link>
           </div>
           {followedCelebs.length === 0 ? (
             <div style={{ background:'#0a0a0a', border:'1px dashed #222', borderRadius:12, padding:'24px 16px', textAlign:'center' }}>
               <div style={{ fontSize:28, marginBottom:8 }}>⭐</div>
               <div style={{ fontSize:14, color:'#555', marginBottom:12 }}>You're not following anyone yet</div>
-              <Link to="/explore" style={{ display:'inline-block', padding:'9px 20px', background:'#3b82f6', color:'#fff', borderRadius:8, fontSize:13, fontWeight:700, textDecoration:'none' }}>
+              <Link to="/explore" style={{ display:'inline-block', padding:'9px 20px', background:'#0095f6', color:'#fff', borderRadius:8, fontSize:13, fontWeight:700, textDecoration:'none' }}>
                 Find celebrities to follow
               </Link>
             </div>
@@ -284,15 +285,15 @@ export default function UserProfile() {
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {followedCelebs.slice(0, 8).map(c => (
                 <Link key={c.id} to={celebPath(c)} style={{ display:'flex', alignItems:'center', gap:12, background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:'10px 14px', textDecoration:'none' }}>
-                  <img src={c.image} alt={c.name}
-                    style={{ width:42, height:42, borderRadius:'50%', objectFit:'cover', objectPosition:'top', flexShrink:0 }}
+                  <img src={celebDisplayImage(c, 256)} alt={c.name}
+                    style={{ width:42, height:42, borderRadius:'50%', objectFit:'cover', objectPosition:'center 22%', flexShrink:0 }}
                     onError={e => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=111&color=aaa&size=200`; }}
                   />
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:13, fontWeight:600, color:'#fff' }}>{c.name}</div>
                     <div style={{ fontSize:11, color:'#555' }}>{c.category}</div>
                   </div>
-                  <Link to={`/messages?with=celeb_${c.id}`} onClick={e => e.stopPropagation()} style={{ fontSize:11, color:'#3b82f6', fontWeight:600, background:'#3b82f618', borderRadius:6, padding:'4px 10px', textDecoration:'none', whiteSpace:'nowrap' }}>
+                  <Link to={`/messages?with=celeb_${c.id}`} onClick={e => e.stopPropagation()} style={{ fontSize:11, color:'#0095f6', fontWeight:600, background:'#0095f618', borderRadius:6, padding:'4px 10px', textDecoration:'none', whiteSpace:'nowrap' }}>
                     Message
                   </Link>
                 </Link>
@@ -324,7 +325,7 @@ export default function UserProfile() {
             <div style={{ padding:'12px 16px' }}>
               <div style={{ fontSize:13, color:'#ccc', lineHeight:1.6 }}>{expandedPost.caption}</div>
               {expandedPost.taggedCelebs?.length > 0 && (
-                <div style={{ fontSize:12, color:'#3b82f6', marginTop:6 }}>
+                <div style={{ fontSize:12, color:'#0095f6', marginTop:6 }}>
                   Tagged: {expandedPost.taggedCelebs.join(', ')}
                 </div>
               )}

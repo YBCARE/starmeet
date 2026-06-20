@@ -80,7 +80,7 @@ export default function Profile() {
                     rows={2}
                     style={{ background:'#111', border:'1px solid #222', borderRadius:8, padding:'7px 12px', color:'#fff', fontSize:13, outline:'none', fontFamily:'inherit', resize:'vertical' }} />
                   <div style={{ display:'flex', gap:8 }}>
-                    <button onClick={handleSave} style={{ flex:1, padding:'7px', background:'#3b82f6', border:'none', borderRadius:8, color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Save</button>
+                    <button onClick={handleSave} style={{ flex:1, padding:'7px', background:'#0095f6', border:'none', borderRadius:8, color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Save</button>
                     <button onClick={() => setEditing(false)} style={{ flex:1, padding:'7px', background:'#1a1a1a', border:'1px solid #222', borderRadius:8, color:'#aaa', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
                   </div>
                 </div>
@@ -120,7 +120,7 @@ export default function Profile() {
           <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:14, padding:'28px', textAlign:'center', color:'#555', marginBottom:20 }}>
             <div style={{ fontSize:28, marginBottom:8 }}>⭐</div>
             <div style={{ fontSize:14, fontWeight:600, color:'#888', marginBottom:6 }}>No follows yet</div>
-            <Link to="/explore" style={{ color:'#3b82f6', textDecoration:'none', fontSize:13 }}>Browse celebrities →</Link>
+            <Link to="/explore" style={{ color:'#0095f6', textDecoration:'none', fontSize:13 }}>Browse celebrities →</Link>
           </div>
         ) : (
           <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:20 }}>
@@ -132,7 +132,7 @@ export default function Profile() {
                     <img src={c.image} alt={c.name}
                       style={{ width:44, height:44, borderRadius:'50%', objectFit:'cover', objectPosition:'top' }}
                       onError={e => { e.currentTarget.src = av2; }} />
-                    <div style={{ position:'absolute', bottom:0, right:0, width:14, height:14, borderRadius:'50%', background:'#3b82f6', border:'2px solid #0a0a0a', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <div style={{ position:'absolute', bottom:0, right:0, width:14, height:14, borderRadius:'50%', background:'#0095f6', border:'2px solid #0a0a0a', display:'flex', alignItems:'center', justifyContent:'center' }}>
                       <Check size={7} strokeWidth={3} color="white" />
                     </div>
                   </div>
@@ -140,7 +140,7 @@ export default function Profile() {
                     <div style={{ fontSize:14, fontWeight:600, color:'#fff' }}>{c.name}</div>
                     <div style={{ fontSize:12, color:'#555' }}>{c.category}</div>
                   </div>
-                  <div style={{ fontSize:11, color:'#3b82f6', fontWeight:600 }}>Following</div>
+                  <div style={{ fontSize:11, color:'#0095f6', fontWeight:600 }}>Following</div>
                 </Link>
               );
             })}

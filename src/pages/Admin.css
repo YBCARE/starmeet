@@ -1,0 +1,30 @@
+.sm-admin {
+  font-family: Inter, system-ui, sans-serif;
+  color: var(--sm-text);
+  background: var(--sm-bg);
+}
+.sm-admin-login {
+  min-height: 100vh;
+  background: var(--sm-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Inter, system-ui, sans-serif;
+}
+.sm-admin-login-card {
+  width: 100%;
+  max-width: 380px;
+  border: 1px solid var(--sm-border);
+  border-radius: 20px;
+  padding: 36px 28px;
+  background: var(--sm-bg-elevated);
+}
+.sm-admin-login-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--sm-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

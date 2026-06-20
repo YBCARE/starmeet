@@ -413,17 +413,22 @@
 }
 
 .landing-cat-ring {
-  width: 88px;
-  height: 88px;
+  width: 112px;
+  height: 112px;
   padding: 3px;
-  border-radius: 50%;
+  border-radius: 22px;
   background: linear-gradient(135deg, var(--sm-accent), var(--sm-pro));
+  transition: transform 0.2s ease;
+}
+
+.landing-cat-item:hover .landing-cat-ring {
+  transform: translateY(-2px);
 }
 
 .landing-cat-ring-inner {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  border-radius: 19px;
   overflow: hidden;
   border: 3px solid var(--sm-bg);
   background: var(--sm-bg-surface);
@@ -433,7 +438,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: top;
+  object-position: center 22%;
+  image-rendering: -webkit-optimize-contrast;
+  transform: scale(1.02);
 }
 
 .landing-cat-label {

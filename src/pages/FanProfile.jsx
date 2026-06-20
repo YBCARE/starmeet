@@ -3,7 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, Heart, Users } from 'lucide-react';
 import { getFakeFans } from '../services/fakeFans';
 import { useCelebContext } from '../context/CelebContext';
-import { celebPath } from '../utils/celebrity';
+import { celebPath, celebDisplayImage } from '../utils/celebrity';
+import './Profile.css';
 
 function seeded(seed) {
   let s = seed >>> 0;
@@ -29,14 +30,12 @@ export default function FanProfile() {
   const { fanId } = useParams();
   const { celebrities } = useCelebContext();
 
-  // Parse fan index from id string "fan_N"
   const fanIndex = parseInt(fanId?.replace('fan_', '') || '0');
   const allFans  = useMemo(() => getFakeFans(), []);
   const fan      = allFans[fanIndex] || allFans[0];
 
   const rng = useMemo(() => seeded(fanIndex * 7919 + 1337), [fanIndex]);
 
-  // Pick 5–12 celebrities this fan follows
   const followCount  = ri(5, 12, seeded(fanIndex * 31));
   const followedCelebs = useMemo(() => {
     if (!celebrities.length) return [];
@@ -48,7 +47,6 @@ export default function FanProfile() {
     return [...picks].map(i => celebrities[i]);
   }, [celebrities, fanIndex, followCount]);
 
-  // Generate 6 liked posts (each shows a celeb photo + caption)
   const likedPosts = useMemo(() => {
     return Array.from({ length: 6 }, (_, i) => {
       const r  = seeded(fanIndex * 41 + i * 97);
@@ -57,7 +55,7 @@ export default function FanProfile() {
       return {
         id:     `lp_${i}`,
         celeb,
-        image:  celeb?.image || `https://picsum.photos/seed/fp${fanIndex + i}/300/300`,
+        image:  celeb ? celebDisplayImage(celeb, 480) : `https://picsum.photos/seed/fp${fanIndex + i}/300/300`,
         cap:    POST_CAPS[i % POST_CAPS.length],
         likes:  ri(10000, 500000, r),
       };
@@ -68,83 +66,78 @@ export default function FanProfile() {
 
   if (!fan) {
     return (
-      <div style={{ minHeight:'100vh', background:'#000', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>
-        Fan not found — <Link to="/explore" style={{ color:'#3b82f6', marginLeft:8 }}>Browse celebrities</Link>
+      <div className="sm-profile" style={{ display:'flex', alignItems:'center', justifyContent:'center', color:'var(--sm-text-faint)' }}>
+        Fan not found — <Link to="/explore" style={{ color:'var(--sm-accent)', marginLeft:8 }}>Browse celebrities</Link>
       </div>
     );
   }
 
   return (
-    <div style={{ background:'#000', minHeight:'100vh', color:'#fff', fontFamily:'Inter,system-ui,sans-serif' }}>
-      {/* Back */}
-      <div style={{ position:'sticky', top:56, zIndex:40, background:'#000', borderBottom:'1px solid #111', padding:'10px 14px' }}>
-        <button onClick={() => history.back()} style={{ background:'none', border:'none', cursor:'pointer', color:'#aaa', display:'inline-flex', alignItems:'center', gap:4, fontSize:14, fontFamily:'inherit' }}>
+    <div className="sm-profile">
+      <div className="sm-profile-bar">
+        <button type="button" onClick={() => history.back()} className="sm-profile-back">
           <ChevronLeft size={18} /> Back
         </button>
       </div>
 
-      <div style={{ maxWidth:540, margin:'0 auto', padding:'20px 16px 60px' }}>
+      <div className="sm-profile-wrap">
+        <div className="sm-profile-card">
+          <img src={fan.avatar} alt={fan.username} className="sm-profile-avatar" />
+          <div className="sm-profile-name">{fan.name}</div>
+          <div className="sm-profile-handle">@{fan.username}</div>
+          <p className="sm-profile-bio">{fan.bio}</p>
 
-        {/* Fan header card */}
-        <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:16, padding:20, marginBottom:20, textAlign:'center' }}>
-          <img src={fan.avatar} alt={fan.username}
-            style={{ width:80, height:80, borderRadius:'50%', objectFit:'cover', margin:'0 auto 12px', display:'block', border:'3px solid #1a1a1a' }}
-          />
-          <div style={{ fontSize:18, fontWeight:700, color:'#fff', marginBottom:4 }}>{fan.name}</div>
-          <div style={{ fontSize:13, color:'#555', marginBottom:8 }}>@{fan.username}</div>
-          <div style={{ fontSize:13, color:'#888', lineHeight:1.6, marginBottom:16, maxWidth:340, margin:'0 auto 16px' }}>{fan.bio}</div>
-
-          {/* Stats */}
-          <div style={{ display:'flex', justifyContent:'center', gap:32, paddingTop:14, borderTop:'1px solid #111' }}>
+          <div className="sm-profile-stats">
             {[
               { icon:<Users size={13}/>,  label:'Following', val: followCount    },
               { icon:<Heart size={13}/>,  label:'Likes',     val: ri(12, 200, seeded(fanIndex)) },
             ].map(s => (
-              <div key={s.label} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-                <div style={{ fontSize:18, fontWeight:700, color:'#fff' }}>{s.val}</div>
-                <div style={{ fontSize:11, color:'#555', display:'flex', alignItems:'center', gap:4 }}>
-                  <span style={{ color:'#444' }}>{s.icon}</span>{s.label}
+              <div key={s.label} style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
+                <div className="sm-profile-stat-val">{s.val}</div>
+                <div className="sm-profile-stat-label">
+                  <span style={{ color:'var(--sm-text-faint)' }}>{s.icon}</span>{s.label}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Following */}
-        <h2 style={{ fontSize:15, fontWeight:700, marginBottom:12, color:'#fff' }}>Following</h2>
+        <h2 className="sm-profile-section">Following</h2>
         {followedCelebs.length === 0 ? (
-          <div style={{ color:'#555', fontSize:13, marginBottom:20 }}>Loading celebrities...</div>
+          <div className="sm-profile-empty">Loading celebrities...</div>
         ) : (
           <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:24 }}>
             {followedCelebs.map(c => (
-              <Link key={c.id} to={celebPath(c)} style={{ display:'flex', alignItems:'center', gap:12, background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:'10px 14px', textDecoration:'none' }}>
-                <img src={c.image} alt={c.name}
-                  style={{ width:42, height:42, borderRadius:'50%', objectFit:'cover', objectPosition:'top', flexShrink:0 }}
+              <Link key={c.id} to={celebPath(c)} className="sm-profile-follow-row">
+                <img
+                  src={celebDisplayImage(c, 256)}
+                  alt={c.name}
+                  loading="lazy"
+                  decoding="async"
                   onError={e => { e.currentTarget.src = av(c.name); }}
                 />
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:600, color:'#fff' }}>{c.name}</div>
-                  <div style={{ fontSize:11, color:'#555' }}>{c.category}</div>
+                  <div className="sm-profile-follow-name">{c.name}</div>
+                  <div className="sm-profile-follow-cat">{c.category}</div>
                 </div>
-                <span style={{ fontSize:11, color:'#3b82f6', fontWeight:600 }}>View →</span>
+                <span className="sm-profile-follow-link">View →</span>
               </Link>
             ))}
           </div>
         )}
 
-        {/* Liked posts grid */}
-        <h2 style={{ fontSize:15, fontWeight:700, marginBottom:12, color:'#fff' }}>Liked Posts</h2>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:3 }}>
+        <h2 className="sm-profile-section">Liked Posts</h2>
+        <div className="sm-profile-grid">
           {likedPosts.map(p => (
-            <div key={p.id} style={{ position:'relative', aspectRatio:'1', overflow:'hidden', background:'#111', borderRadius:4 }}>
+            <div key={p.id} className="sm-profile-grid-item">
               <img
                 src={p.image}
                 alt=""
-                style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top', display:'block' }}
                 loading="lazy"
+                decoding="async"
                 onError={e => { e.currentTarget.src = av(p.celeb?.name || 'fan'); }}
               />
-              <div style={{ position:'absolute', bottom:0, left:0, right:0, background:'linear-gradient(to top,rgba(0,0,0,0.8),transparent)', padding:'6px 6px 5px', display:'flex', alignItems:'center', gap:3 }}>
+              <div className="sm-profile-grid-overlay">
                 <Heart size={11} fill="#e05252" color="#e05252" />
                 <span style={{ fontSize:10, color:'#fff', fontWeight:600 }}>{fmtNum(p.likes)}</span>
               </div>
