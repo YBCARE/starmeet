@@ -39,10 +39,19 @@ export function celebPath(celeb) {
   return `/celebrity/${slugify(celeb.name)}`;
 }
 
+/** Shared img attrs — Wikimedia blocks hotlinks without no-referrer */
+export const CELEB_IMG_PROPS = {
+  referrerPolicy: 'no-referrer',
+  loading: 'lazy',
+  decoding: 'async',
+};
+
 /** Request higher-res image URLs (Wikipedia thumbs, Unsplash, etc.) */
 export function enhanceImageUrl(url, px = 480) {
   if (!url || typeof url !== 'string') return url;
   if (url.includes('ui-avatars.com')) return url;
+
+  url = url.replace(/^http:\/\//i, 'https://');
 
   if (url.includes('unsplash.com')) {
     let next = url.replace(/w=\d+/g, `w=${px}`).replace(/h=\d+/g, `h=${px}`);
@@ -52,15 +61,27 @@ export function enhanceImageUrl(url, px = 480) {
     return next;
   }
 
-  if (url.includes('wikimedia.org') && url.includes('/thumb/')) {
-    return url.replace(/\/(\d+)px-/, `/${px}px-`);
+  // Never upscale Wikimedia thumbs — larger px paths often 404 in the browser
+  if (url.includes('wikimedia.org') && url.includes('/thumb/') && /\/\d+px-/.test(url)) {
+    const match = url.match(/\/(\d+)px-/);
+    if (match) {
+      const current = parseInt(match[1], 10);
+      if (px < current) return url.replace(/\/(\d+)px-/, `/${px}px-`);
+    }
+    return url;
   }
 
   return url;
 }
 
 export function celebDisplayImage(celeb, px = 480) {
-  return enhanceImageUrl(celeb?.image, px);
+  const url = celeb?.image;
+  if (!url || url.includes('ui-avatars.com')) return url || null;
+  return enhanceImageUrl(url, px);
+}
+
+export function isRealCelebPhoto(url) {
+  return !!url && !url.includes('ui-avatars.com');
 }
 
 /** Pick a recognizable celebrity with a good photo for category rings */
@@ -70,7 +91,7 @@ export function pickCategoryCeleb(celebList, def) {
 
   for (const name of spotlight) {
     const found = all.find(c => c.name?.toLowerCase().includes(name.toLowerCase()));
-    if (found?.image) return found;
+    if (found && isRealCelebPhoto(found.image)) return found;
   }
 
   const matches = all.filter(c =>
@@ -78,8 +99,9 @@ export function pickCategoryCeleb(celebList, def) {
   );
 
   return (
-    matches.find(c => c.image && c.verified) ||
-    matches.find(c => c.image && !c.image.includes('ui-avatars')) ||
+    matches.find(c => isRealCelebPhoto(c.image) && c.verified) ||
+    matches.find(c => isRealCelebPhoto(c.image)) ||
+    matches.find(c => c.image) ||
     matches[0] ||
     null
   );

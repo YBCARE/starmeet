@@ -2,10 +2,9 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Users, Check } from 'lucide-react';
 import { celebPath } from '../utils/celebrity';
+import CelebImage from './CelebImage';
 
 export default function CelebrityCard({ celebrity: c, index = 0 }) {
-  const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=111827&color=3B82F6&size=400`;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -29,9 +28,8 @@ export default function CelebrityCard({ celebrity: c, index = 0 }) {
             <div className="flex items-end gap-3">
               {/* Avatar with verified badge bottom-left */}
               <div className="relative flex-shrink-0">
-                <img src={c.image} alt={c.name}
-                  className="w-14 h-14 rounded-xl border-2 border-[#111] object-cover object-top"
-                  onError={e => { e.currentTarget.src = fallback; }}
+                <CelebImage celeb={c} alt={c.name} px={440}
+                  className="w-14 h-14 rounded-xl border-2 border-[#111] object-cover object-[center_22%]"
                 />
                 {/* Blue verified badge — bottom-left corner */}
                 <div className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-blue-500

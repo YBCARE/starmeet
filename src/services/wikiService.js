@@ -1463,6 +1463,23 @@ export async function fetchCategoryMembers(category, cap = 300) {
 }
 
 // ─── Batch-fetch page details (photo + extract) for up to 50 titles ────────
+export async function fetchWikiSummaryPhoto(title) {
+  try {
+    const slug = encodeURIComponent(String(title).replace(/ /g, '_'));
+    const res  = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${slug}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.thumbnail?.source || null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeWikiImage(url) {
+  if (!url) return url;
+  return String(url).replace(/^http:\/\//i, 'https://');
+}
+
 export async function fetchPageDetails(titles) {
   if (!titles.length) return [];
 
@@ -1474,7 +1491,7 @@ export async function fetchPageDetails(titles) {
     exsentences: 2,
     explaintext: true,
     titles:      titles.join('|'),
-    pithumbsize: 500,
+    pithumbsize: 600,
     origin:      '*',
     redirects:   1,
   });
@@ -1485,15 +1502,43 @@ export async function fetchPageDetails(titles) {
     data = await res.json();
   } catch { return []; }
 
-  return Object.values(data.query?.pages || {})
-    .filter(p => p.thumbnail?.source && !p.missing && p.pageid > 0)
-    .map(p => ({
-      id:      p.pageid,
-      name:    p.title,
-      image:   p.thumbnail.source,
-      bio:     (p.extract || '').replace(/\n.*/s, '').trim(),
-      wikiUrl: `https://en.wikipedia.org/wiki/${encodeURIComponent(p.title.replace(/ /g, '_'))}`,
-    }));
+  const pages = Object.values(data.query?.pages || {})
+    .filter(p => !p.missing && p.pageid > 0);
+
+  const results = [];
+  const needFallback = [];
+
+  for (const p of pages) {
+    const image = normalizeWikiImage(p.thumbnail?.source);
+    if (image) {
+      results.push({
+        id:      p.pageid,
+        name:    p.title,
+        image,
+        bio:     (p.extract || '').replace(/\n.*/s, '').trim(),
+        wikiUrl: `https://en.wikipedia.org/wiki/${encodeURIComponent(p.title.replace(/ /g, '_'))}`,
+      });
+    } else {
+      needFallback.push(p);
+    }
+  }
+
+  // REST summary fallback for pages missing thumbnails in batch API
+  await Promise.all(
+    needFallback.slice(0, 12).map(async p => {
+      const image = normalizeWikiImage(await fetchWikiSummaryPhoto(p.title));
+      if (!image) return;
+      results.push({
+        id:      p.pageid,
+        name:    p.title,
+        image,
+        bio:     (p.extract || '').replace(/\n.*/s, '').trim(),
+        wikiUrl: `https://en.wikipedia.org/wiki/${encodeURIComponent(p.title.replace(/ /g, '_'))}`,
+      });
+    })
+  );
+
+  return results;
 }
 
 // ─── Open Library: fetch notable authors as "Creators" ────────────────────
@@ -1533,7 +1578,7 @@ export function buildCelebrity(raw, category) {
     id:          raw.id || ++_idCounter,
     name:        raw.name,
     category,
-    image:       raw.image,
+    image:       normalizeWikiImage(raw.image),
     cover:       buildCoverUrl(raw.id || _idCounter, category),
     bio:         raw.bio || `${raw.name} is a world-renowned ${category.toLowerCase()}.`,
     wikiUrl:     raw.wikiUrl || '',

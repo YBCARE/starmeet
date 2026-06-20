@@ -3,7 +3,8 @@ import { Search, Check, Users, TrendingUp, Zap, Clock, ArrowUpDown, X } from 'lu
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useCelebContext } from '../context/CelebContext';
 import { useAuth } from '../context/AuthContext';
-import { celebPath, celebDisplayImage } from '../utils/celebrity';
+import { celebPath } from '../utils/celebrity';
+import CelebImage from '../components/CelebImage';
 
 const CATS = ['All','Actor','Actress','Musician','Director','Movie Producer','Comedian','Model','Athlete','Creator'];
 
@@ -42,17 +43,14 @@ function fmtNum(n) {
 function CelebCard({ c, index }) {
   const { isFollowing, toggleFollow } = useAuth();
   const following = isFollowing(c.id);
-  const av = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=111&color=aaa&size=400`;
   const meta = useMemo(() => getCelebMeta(c, index), [c.id, index]);
 
   return (
     <div className="sm-card card-glow" style={{ cursor:'pointer', position:'relative' }}>
       <Link to={celebPath(c)} style={{ textDecoration:'none', display:'block' }}>
         <div style={{ aspectRatio:'3/4', overflow:'hidden', background:'#111', position:'relative' }}>
-          <img src={celebDisplayImage(c, 640) || av} alt={c.name}
+          <CelebImage celeb={c} px={440} alt={c.name}
             style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 22%', display:'block' }}
-            loading="lazy"
-            onError={e => { e.currentTarget.src = av; }}
           />
           {/* Gradient */}
           <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'58%', background:'linear-gradient(to top,rgba(0,0,0,0.95) 0%,transparent 100%)' }} />
@@ -147,9 +145,9 @@ function CelebRow({ celebrities, label, icon, labelColor }) {
             <div key={c.id} style={{ flexShrink:0, width:130 }}>
               <Link to={celebPath(c)} style={{ textDecoration:'none', display:'block' }}>
                 <div style={{ width:130, height:170, borderRadius:12, overflow:'hidden', background:'#111', position:'relative', marginBottom:8 }}>
-                  <img src={c.image} alt={c.name}
-                    style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top' }}
-                    onError={e => { e.currentTarget.src = av(c.name); }} />
+                  <CelebImage celeb={c} alt={c.name} px={440}
+                    style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 22%' }}
+                  />
                   <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 60%)' }} />
                   <div style={{ position:'absolute', bottom:8, left:8, right:8 }}>
                     <div style={{ fontSize:12, fontWeight:700, color:'#fff', lineHeight:1.2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name}</div>

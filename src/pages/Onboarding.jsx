@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check, ChevronRight } from 'lucide-react';
 import { useCelebContext } from '../context/CelebContext';
 import { useAuth } from '../context/AuthContext';
-import { celebDisplayImage } from '../utils/celebrity';
+import CelebImage from '../components/CelebImage';
 import './Onboarding.css';
 
 const CATEGORY_ORDER = [
@@ -18,8 +18,6 @@ export default function Onboarding() {
   const { toggleCelebFollow, celebFollows, user } = useAuth();
   const [selected, setSelected] = useState(new Set(celebFollows));
   const [saving, setSaving] = useState(false);
-
-  const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=111&color=aaa&size=200`;
 
   const sorted = useMemo(() => {
     if (!celebrities.length) return [];
@@ -120,13 +118,7 @@ export default function Onboarding() {
                       </span>
                     )}
                     <div className="sm-onboard-avatar">
-                      <img
-                        src={celebDisplayImage(c, 256)}
-                        alt={c.name}
-                        loading="lazy"
-                        decoding="async"
-                        onError={e => { e.currentTarget.src = av(c.name); }}
-                      />
+                      <CelebImage celeb={c} alt={c.name} px={440} />
                     </div>
                     <span className="sm-onboard-name">{c.name}</span>
                   </button>

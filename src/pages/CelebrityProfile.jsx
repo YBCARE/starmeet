@@ -6,7 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { getSomeFans, getFakeFans } from '../services/fakeFans';
 import { fetchCelebPhotos, fetchCelebBio } from '../services/wikiPhotos';
 import { useMeta } from '../hooks/useMeta';
-import { findCelebrity, celebPath, celebDisplayImage } from '../utils/celebrity';
+import { findCelebrity, celebPath } from '../utils/celebrity';
+import CelebImage from '../components/CelebImage';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function seeded(seed) {
@@ -332,9 +333,9 @@ export default function CelebrityProfile() {
             <div style={{ position:'relative', flexShrink:0 }}>
               <div style={{ width:90, height:90, borderRadius:'50%', padding:3, background: isMemorial ? 'linear-gradient(135deg,#92400e,#fbbf24)' : 'linear-gradient(135deg,#0095f6,#8b5cf6)' }}>
                 <div style={{ width:'100%', height:'100%', borderRadius:'50%', overflow:'hidden', border:'3px solid #000', filter: isMemorial ? 'grayscale(0.4)' : 'none' }}>
-                  <img src={celebDisplayImage(celeb, 512) || av(celeb.name)} alt={celeb.name}
+                  <CelebImage celeb={celeb} alt={celeb.name} px={440}
                     style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 22%' }}
-                    onError={e => { e.currentTarget.src = av(celeb.name); }} />
+                  />
                 </div>
               </div>
               {isMemorial ? (

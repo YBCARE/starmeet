@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 import { useCelebContext } from '../context/CelebContext';
 import { celebrities as STATIC_CELEBS } from '../data/celebrities';
-import { celebPath, pickCategoryCeleb, celebDisplayImage } from '../utils/celebrity';
+import { celebPath, pickCategoryCeleb } from '../utils/celebrity';
+import CelebImage from '../components/CelebImage';
 import Navbar from '../components/Navbar';
 import './Landing.css';
 
@@ -28,7 +29,7 @@ function buildCategories(celebList) {
       label: def.label,
       match: def.match,
       name:  celeb?.name  || def.label,
-      image: celeb ? celebDisplayImage(celeb, 512) : null,
+      celeb,
       id:    celeb?.id    || null,
     };
   });
@@ -258,21 +259,16 @@ export default function Landing() {
         </div>
         <div className="landing-wrap">
           <div className="landing-categories-scroll">
-            {categories.map((cat, idx) => {
-              const fallback = av(cat.name);
-              return (
+            {categories.map((cat, idx) => (
                 <Link key={cat.label + idx} to={`/explore?cat=${cat.match}`} className="landing-cat-item">
                   <div className="landing-cat-ring">
                     <div className="landing-cat-ring-inner">
-                      <img src={cat.image || fallback} alt={cat.name}
-                        loading="lazy" decoding="async"
-                        onError={e => { e.currentTarget.src = fallback; }} />
+                      <CelebImage celeb={cat.celeb} name={cat.name} px={440} alt={cat.name} />
                     </div>
                   </div>
                   <span className="landing-cat-label">{cat.label}</span>
                 </Link>
-              );
-            })}
+              ))}
           </div>
         </div>
       </section>
@@ -304,8 +300,7 @@ export default function Landing() {
                   <div className="landing-trend-img">
                     {isReal ? (
                       <>
-                        <img src={c.image} alt={c.name}
-                          onError={e => { e.currentTarget.src = av(c.name); }} />
+                        <CelebImage celeb={c} alt={c.name} px={440} />
                         <span className="landing-trend-badge">
                           <MessageCircle size={10} color="var(--sm-accent)" />
                           DM open

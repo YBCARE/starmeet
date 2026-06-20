@@ -3,7 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, Heart, Users } from 'lucide-react';
 import { getFakeFans } from '../services/fakeFans';
 import { useCelebContext } from '../context/CelebContext';
-import { celebPath, celebDisplayImage } from '../utils/celebrity';
+import { celebPath } from '../utils/celebrity';
+import CelebImage from '../components/CelebImage';
 import './Profile.css';
 
 function seeded(seed) {
@@ -109,13 +110,7 @@ export default function FanProfile() {
           <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:24 }}>
             {followedCelebs.map(c => (
               <Link key={c.id} to={celebPath(c)} className="sm-profile-follow-row">
-                <img
-                  src={celebDisplayImage(c, 256)}
-                  alt={c.name}
-                  loading="lazy"
-                  decoding="async"
-                  onError={e => { e.currentTarget.src = av(c.name); }}
-                />
+                <CelebImage celeb={c} alt={c.name} px={440} />
                 <div style={{ flex:1 }}>
                   <div className="sm-profile-follow-name">{c.name}</div>
                   <div className="sm-profile-follow-cat">{c.category}</div>

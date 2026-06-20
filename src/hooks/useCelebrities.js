@@ -23,7 +23,7 @@ import {
   buildCelebrity,
 } from '../services/wikiService';
 
-const CACHE_KEY     = 'starmeet_v3_celebrities';
+const CACHE_KEY     = 'starmeet_v4_celebrities';
 const CACHE_TTL_MS  = 24 * 60 * 60 * 1000; // 24 h
 const BATCH_SIZE    = 50;   // Wikipedia allows 50 titles per query
 const INTER_BATCH_MS = 150; // polite delay between requests
@@ -59,6 +59,8 @@ export function useCelebrities() {
     let cancelled = false;
 
     async function run() {
+      // Drop stale cache so photos reload with fixed URLs
+      try { localStorage.removeItem('starmeet_v3_celebrities'); } catch { /* ignore */ }
 
       // ── 1. Cache check ─────────────────────────────────────────────────
       try {

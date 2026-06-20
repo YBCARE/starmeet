@@ -5,7 +5,8 @@ import { Camera, Edit2, Grid3x3, Heart, MessageCircle, LogOut, Check, ChevronLef
 import { useAuth } from '../context/AuthContext';
 import { useFanPosts } from '../context/FanPostContext';
 import { useCelebContext } from '../context/CelebContext';
-import { celebPath, celebDisplayImage } from '../utils/celebrity';
+import { celebPath } from '../utils/celebrity';
+import CelebImage from '../components/CelebImage';
 import './Profile.css';
 
 function fmtNum(n) {
@@ -285,9 +286,8 @@ export default function UserProfile() {
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {followedCelebs.slice(0, 8).map(c => (
                 <Link key={c.id} to={celebPath(c)} style={{ display:'flex', alignItems:'center', gap:12, background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:12, padding:'10px 14px', textDecoration:'none' }}>
-                  <img src={celebDisplayImage(c, 256)} alt={c.name}
+                  <CelebImage celeb={c} alt={c.name} px={440}
                     style={{ width:42, height:42, borderRadius:'50%', objectFit:'cover', objectPosition:'center 22%', flexShrink:0 }}
-                    onError={e => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=111&color=aaa&size=200`; }}
                   />
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:13, fontWeight:600, color:'#fff' }}>{c.name}</div>
