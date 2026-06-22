@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { getSomeFans, getFakeFans } from '../services/fakeFans';
 import { fetchCelebPhotos, fetchCelebBio } from '../services/wikiPhotos';
 import { useMeta } from '../hooks/useMeta';
-import { findCelebrity, celebPath } from '../utils/celebrity';
+import { findCelebrity, celebPath, celebStableId, celebDisplayImage } from '../utils/celebrity';
 import CelebImage from '../components/CelebImage';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ function GridCell({ post, celebMain, onExpand }) {
 // ═════════════════════════════════════════════════════════════════════════════
 export default function CelebrityProfile() {
   const { id } = useParams();
-  const { celebrities } = useCelebContext();
+  const { celebrities, loading, phase } = useCelebContext();
   const { isFollowing, toggleFollow, isLiked, toggleLike, user } = useAuth();
   const navigate = useNavigate();
 
@@ -225,7 +225,7 @@ export default function CelebrityProfile() {
       setGridPhotos(photos);
       if (bio) setWikiBio(bio);
       setPhotosLoading(false);
-    });
+    }).catch(() => setPhotosLoading(false));
   }, [celeb?.name]);
 
   const seed = useMemo(() => {
@@ -240,12 +240,13 @@ export default function CelebrityProfile() {
   // Build grid posts — only as many as unique photos we have (no duplicates)
   const gridPosts = useMemo(() => {
     if (!celeb) return [];
-    const count = Math.max(gridPhotos.length, 1); // at least 1 (main photo)
+    const count = Math.max(gridPhotos.length, 9);
     return Array.from({ length: count }, (_, i) => {
       const r = seeded(seed * 31 + i * 97);
+      const fallbackImg = `https://picsum.photos/seed/${celebStableId(celeb)}_${i}/640/640`;
       return {
         id:      `gp_${i}`,
-        image:   gridPhotos[i] ?? celebDisplayImage(celeb, 640),
+        image:   gridPhotos[i] ?? celeb?.image ?? fallbackImg,
         isVideo: false,
         likes:   ri(10000, 900000, r),
         commCnt: ri(100, 5000, r),
@@ -264,11 +265,13 @@ export default function CelebrityProfile() {
 
   const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=111&color=aaa&size=200`;
   const following = isFollowing(celeb?.id);
+  const catalogLoading = loading || (phase !== 'done' && celebrities.length < 300);
 
-  if (!celeb && celebrities.length === 0) {
+  if (!celeb && catalogLoading) {
     return (
-      <div style={{ minHeight:'100vh', background:'#000', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ minHeight:'100vh', background:'#000', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14 }}>
         <div style={{ width:32, height:32, border:'2px solid #333', borderTopColor:'#0095f6', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+        <div style={{ fontSize:13, color:'#555' }}>Loading profile…</div>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     );

@@ -113,6 +113,10 @@ export function useCelebrities() {
         await delay(INTER_BATCH_MS);
       }
 
+      if (!cancelled) {
+        setLoading(false);
+      }
+
       if (cancelled) return;
 
       // ── 3. Discover more via Wikipedia categories ──────────────────────
@@ -197,7 +201,11 @@ export function useCelebrities() {
       } catch { /* storage full — skip */ }
 
       setFetched(final.length);
-      setCelebrities(final);
+      setCelebrities(prev => {
+        const byId = new Map(prev.map(c => [String(c.id), c]));
+        for (const c of final) byId.set(String(c.id), c);
+        return Array.from(byId.values());
+      });
       setLoading(false);
       setPhase('done');
     }

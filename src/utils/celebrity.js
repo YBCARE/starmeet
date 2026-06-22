@@ -20,17 +20,29 @@ export function slugify(name = '') {
     .replace(/^-+|-+$/g, '');
 }
 
+export function celebStableId(c) {
+  if (!c?.id && c?.id !== 0) return 0;
+  if (typeof c.id === 'number') return c.id;
+  return String(c.id).split('').reduce((a, ch) => a + ch.charCodeAt(0), 0);
+}
+
 export function findCelebrity(celebrities, idOrSlug) {
   if (!idOrSlug || !celebrities?.length) return null;
   const raw = decodeURIComponent(String(idOrSlug)).trim();
+
   const byId = celebrities.find(c => String(c.id) === raw);
   if (byId) return byId;
+
   const slug = raw.toLowerCase();
-  const bySlug = celebrities.find(c => slugify(c.name) === slug);
+  const norm = (name) => slugify(name);
+
+  const bySlug = celebrities.find(c => norm(c.name) === slug);
   if (bySlug) return bySlug;
+
+  const baseSlug = slug.replace(/-actor$|-actress$|-musician$|-film-director$/, '');
   return celebrities.find(c => {
-    const s = slugify(c.name);
-    return s.includes(slug) || slug.includes(s);
+    const base = c.name.replace(/\s*\([^)]*\)\s*$/, '').trim();
+    return norm(base) === slug || norm(base) === baseSlug;
   }) || null;
 }
 

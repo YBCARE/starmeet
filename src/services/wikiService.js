@@ -1573,20 +1573,27 @@ export async function fetchOpenLibraryAuthors(queries) {
 
 // ─── Build full celebrity object ──────────────────────────────────────────
 let _idCounter = 10000;
+function seededFromId(id) {
+  const n = typeof id === 'number' ? id : hashStr(String(id));
+  return ((n * 1664525 + 1013904223) >>> 0) / 0xffffffff;
+}
+
 export function buildCelebrity(raw, category) {
+  const id = raw.id || ++_idCounter;
+  const fame = seededFromId(id);
   return {
-    id:          raw.id || ++_idCounter,
+    id,
     name:        raw.name,
     category,
     image:       normalizeWikiImage(raw.image),
-    cover:       buildCoverUrl(raw.id || _idCounter, category),
+    cover:       buildCoverUrl(id, category),
     bio:         raw.bio || `${raw.name} is a world-renowned ${category.toLowerCase()}.`,
     wikiUrl:     raw.wikiUrl || '',
     verified:    isLikelyFamous(raw.name),
     followers:   randomFollowers(),
     posts:       Math.floor(Math.random() * 900) + 50,
-    trending:    Math.random() > 0.78,
-    newlyJoined: Math.random() > 0.88,
+    trending:    fame > 0.78,
+    newlyJoined: fame > 0.88,
   };
 }
 

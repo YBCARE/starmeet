@@ -3,7 +3,7 @@ import { Search, Check, Users, TrendingUp, Zap, Clock, ArrowUpDown, X } from 'lu
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useCelebContext } from '../context/CelebContext';
 import { useAuth } from '../context/AuthContext';
-import { celebPath } from '../utils/celebrity';
+import { celebPath, celebStableId } from '../utils/celebrity';
 import CelebImage from '../components/CelebImage';
 
 const CATS = ['All','Actor','Actress','Musician','Director','Movie Producer','Comedian','Model','Athlete','Creator'];
@@ -20,15 +20,16 @@ function seededRand(seed) {
   return (s >>> 0) / 0xffffffff;
 }
 
-function getCelebMeta(c, index) {
-  const r1 = seededRand(index * 31 + 7);
-  const r2 = seededRand(index * 53 + 13);
-  const r3 = seededRand(index * 73 + 17);
+function getCelebMeta(c) {
+  const seed = celebStableId(c);
+  const r1 = seededRand(seed * 31 + 7);
+  const r2 = seededRand(seed * 53 + 13);
+  const r3 = seededRand(seed * 73 + 17);
   const activityLabel = ACTIVITY_LABELS[Math.floor(r1 * ACTIVITY_LABELS.length)];
   const isTrending    = r2 < HOT_THRESHOLDS.trending;
   const isActive      = !isTrending && r2 < HOT_THRESHOLDS.active;
-  const isNew         = !isTrending && !isActive && r2 < HOT_THRESHOLDS.recent;
-  const isReplyFast   = r3 < HOT_THRESHOLDS.replyFast; // "Replying fast today"
+  const isNew         = c.newlyJoined || (!isTrending && !isActive && r2 < HOT_THRESHOLDS.recent);
+  const isReplyFast   = r3 < HOT_THRESHOLDS.replyFast;
   return { activityLabel, isTrending, isActive, isNew, isReplyFast };
 }
 
@@ -43,7 +44,7 @@ function fmtNum(n) {
 function CelebCard({ c, index }) {
   const { isFollowing, toggleFollow } = useAuth();
   const following = isFollowing(c.id);
-  const meta = useMemo(() => getCelebMeta(c, index), [c.id, index]);
+  const meta = useMemo(() => getCelebMeta(c), [c.id, c.newlyJoined]);
 
   return (
     <div className="sm-card card-glow" style={{ cursor:'pointer', position:'relative' }}>
@@ -180,12 +181,24 @@ export default function Explore() {
   const [sort,  setSort]  = useState('default'); // 'default' | 'followers' | 'newest' | 'active'
   const [showSort, setShowSort] = useState(false);
 
-  // Trending = first 15% by seeded score, New = last joined slice
+  // Trending / Just joined — stable per celebrity id (won't shuffle as more load)
   const { trendingCelebs, newCelebs } = useMemo(() => {
     if (!celebrities.length) return { trendingCelebs: [], newCelebs: [] };
-    const scored  = celebrities.map((c, i) => ({ c, score: seededRand(i * 31 + 7) }));
-    const trending = scored.filter(s => s.score < HOT_THRESHOLDS.trending).slice(0, 12).map(s => s.c);
-    const newOnes  = celebrities.slice(-10).reverse(); // last added = newest
+    const scored = celebrities.map(c => ({
+      c,
+      trend: seededRand(celebStableId(c) * 31 + 7),
+      recent: seededRand(celebStableId(c) * 53 + 13),
+    }));
+    const trending = scored
+      .filter(s => s.trend < HOT_THRESHOLDS.trending)
+      .sort((a, b) => a.trend - b.trend)
+      .slice(0, 12)
+      .map(s => s.c);
+    const newOnes = scored
+      .filter(s => s.c.newlyJoined || s.recent >= HOT_THRESHOLDS.recent)
+      .sort((a, b) => b.recent - a.recent)
+      .slice(0, 12)
+      .map(s => s.c);
     return { trendingCelebs: trending, newCelebs: newOnes };
   }, [celebrities]);
 
@@ -209,7 +222,9 @@ export default function Explore() {
         return toNum(b.followers) - toNum(a.followers);
       });
     } else if (sort === 'active') {
-      result = [...result].sort((a, i) => seededRand(celebrities.indexOf(a) * 31 + 7) - 0.5);
+      result = [...result].sort((a, b) =>
+        seededRand(celebStableId(a) * 31 + 7) - seededRand(celebStableId(b) * 31 + 7)
+      );
     } else if (sort === 'newest') {
       result = [...result].reverse();
     }
