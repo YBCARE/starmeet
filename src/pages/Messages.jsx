@@ -12,7 +12,7 @@ import {
   isAutoReplyEnabled,
 } from '../services/messageStore';
 import { celebPath } from '../utils/celebrity';
-import { redirectToStripe } from '../config/stripe';
+import { redirectToStripe, isStripeConfigured } from '../config/stripe';
 import './Messages.css';
 
 // ─── Smart reply engine ───────────────────────────────────────────────────────
@@ -496,13 +496,12 @@ const FREE_MSG_LIMIT = 5; // free users can send 5 messages per celebrity
 
 // ─── Pro upgrade modal ────────────────────────────────────────────────────────
 function UpgradeModal({ celebName, onClose, onUpgrade, isPro: alreadyPro }) {
+  const paymentsLive = isStripeConfigured('pro');
+
   function handleUpgrade(plan) {
-    const sentToStripe = redirectToStripe(plan);
-    if (!sentToStripe) {
-      // Stripe not configured — simulate upgrade (dev/demo mode)
-      onUpgrade(plan);
-    }
-    // If sentToStripe === true, the page will redirect; modal stays open briefly
+    if (redirectToStripe(plan)) return;
+    onUpgrade(plan);
+    onClose();
   }
   return (
     <div className="msg-upgrade-overlay" onClick={onClose}>
@@ -537,9 +536,14 @@ function UpgradeModal({ celebName, onClose, onUpgrade, isPro: alreadyPro }) {
               </div>
             ))}
             <button onClick={() => handleUpgrade('pro')} className="msg-upgrade-cta">
-              Upgrade to Pro — $9/mo →
+              {paymentsLive ? 'Upgrade to Pro — $9/mo →' : 'Unlock Pro — free for now →'}
             </button>
           </div>
+          {!paymentsLive && (
+            <div style={{ fontSize: 11, color: 'var(--sm-text-faint)', textAlign: 'center', marginTop: 10 }}>
+              Payments not connected yet — Pro unlocks instantly on this site.
+            </div>
+          )}
           <div className="msg-upgrade-secondary">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>Celebrity 🌟</div>

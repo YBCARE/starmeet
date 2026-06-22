@@ -3,6 +3,7 @@ import { useState, useRef, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Camera, Edit2, Grid3x3, Heart, MessageCircle, LogOut, Check, ChevronLeft, Plus, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { isStripeConfigured } from '../config/stripe';
 import { useFanPosts } from '../context/FanPostContext';
 import { useCelebContext } from '../context/CelebContext';
 import { celebPath } from '../utils/celebrity';
@@ -212,7 +213,7 @@ export default function UserProfile() {
                 <div style={{ fontSize:11, color:'#93c5fd' }}>Unlimited messages with any celebrity</div>
               </div>
               <button onClick={() => upgradeToPro('pro')} style={{ padding:'8px 16px', background:'#0095f6', border:'none', borderRadius:8, color:'#fff', fontSize:12, fontWeight:800, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                $9/mo
+                {isStripeConfigured('pro') ? '$9/mo' : 'Unlock free'}
               </button>
             </div>
           </div>

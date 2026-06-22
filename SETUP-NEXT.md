@@ -1,24 +1,16 @@
-# Starmeet — Next setup steps
+# Starmeet — Optional setup
 
-## High: Stripe Pro upgrades
+## Stripe (optional — not required to launch)
 
-1. [Stripe Dashboard](https://dashboard.stripe.com) → **Products** → create:
-   - **Pro Fan** — $9/month recurring
-   - **Celebrity** — $29/month recurring
-2. **Payment Links** → create one link per product
-3. For each link, set **After payment** → redirect to:
-   - Pro: `https://starmeet.online/upgrade-success?plan=pro`
-   - Celebrity: `https://starmeet.online/upgrade-success?plan=celebrity`
-4. Copy `.env.example` → `.env` and paste:
-   - `VITE_STRIPE_PUBLISHABLE_KEY` (starts with `pk_live_`)
-   - `VITE_STRIPE_LINK_PRO`
-   - `VITE_STRIPE_LINK_CELEBRITY`
-5. **Vercel** → Project → Settings → Environment Variables → add the same three `VITE_*` vars → redeploy
-6. Test with live card (or `4242…` in test mode with `pk_test_` keys)
+**You do not need Stripe for the site to work.** Without it, Pro upgrades unlock instantly (demo mode) — unlimited messages, Pro badge, exclusive feed content.
 
-Until keys are set, Pro upgrades use **demo mode** (local activation only, no real payment).
+When you want **real payments** later:
 
----
+1. Create a free account at [stripe.com](https://stripe.com)
+2. Follow steps in `.env.example`
+3. Add keys to Vercel → redeploy
+
+Until then, skip Stripe entirely.
 
 ## Medium: Mobile QA
 
