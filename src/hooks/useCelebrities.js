@@ -14,6 +14,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { filterCelebrityCatalog, DECEASED_CELEBRITY_NAMES, SYNTHETIC_CELEBRITY_NAMES } from '../utils/celebrityFilters';
 import {
   SEED_CELEBRITIES,
   WIKI_CATEGORIES,
@@ -23,7 +24,11 @@ import {
   buildCelebrity,
 } from '../services/wikiService';
 
-const CACHE_KEY     = 'starmeet_v4_celebrities';
+const LIVE_SEEDS = SEED_CELEBRITIES.filter(
+  ([name]) => !DECEASED_CELEBRITY_NAMES.has(name) && !SYNTHETIC_CELEBRITY_NAMES.has(name)
+);
+
+const CACHE_KEY     = 'starmeet_v5_celebrities';
 const CACHE_TTL_MS  = 24 * 60 * 60 * 1000; // 24 h
 const BATCH_SIZE    = 50;   // Wikipedia allows 50 titles per query
 const INTER_BATCH_MS = 150; // polite delay between requests
@@ -47,29 +52,34 @@ export function useCelebrities() {
   const [discovered, setDiscovered]     = useState(0);        // how many names found
 
   const addBatch = useCallback((newItems) => {
+    const live = filterCelebrityCatalog(newItems);
+    if (!live.length) return;
     setCelebrities(prev => {
       const existingIds = new Set(prev.map(c => c.id));
-      const fresh = newItems.filter(c => !existingIds.has(c.id));
+      const fresh = live.filter(c => !existingIds.has(c.id));
       return [...prev, ...fresh];
     });
-    setFetched(n => n + newItems.length);
+    setFetched(n => n + live.length);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
 
     async function run() {
-      // Drop stale cache so photos reload with fixed URLs
-      try { localStorage.removeItem('starmeet_v3_celebrities'); } catch { /* ignore */ }
+      try {
+        localStorage.removeItem('starmeet_v3_celebrities');
+        localStorage.removeItem('starmeet_v4_celebrities');
+      } catch { /* ignore */ }
 
       // ── 1. Cache check ─────────────────────────────────────────────────
       try {
         const raw = localStorage.getItem(CACHE_KEY);
         if (raw) {
           const { data, ts } = JSON.parse(raw);
-          if (Date.now() - ts < CACHE_TTL_MS && Array.isArray(data) && data.length > 200) {
-            setCelebrities(data);
-            setFetched(data.length);
+          const live = filterCelebrityCatalog(data);
+          if (Date.now() - ts < CACHE_TTL_MS && live.length > 200) {
+            setCelebrities(live);
+            setFetched(live.length);
             setLoading(false);
             setPhase('done');
             return;
@@ -79,7 +89,7 @@ export function useCelebrities() {
 
       // ── 2. Seed celebrities (immediate) ────────────────────────────────
       setPhase('seeds');
-      const seedBatches = chunk(SEED_CELEBRITIES, BATCH_SIZE);
+      const seedBatches = chunk(LIVE_SEEDS, BATCH_SIZE);
       const seedResults = [];
       const seenNames   = new Set();
 
@@ -89,12 +99,14 @@ export function useCelebrities() {
         const catMap    = Object.fromEntries(batch);
         const details   = await fetchPageDetails(titles);
 
-        const celebs = details
-          .filter(d => !seenNames.has(d.name))
-          .map(d => {
-            seenNames.add(d.name);
-            return buildCelebrity(d, catMap[d.name] || 'Actor');
-          });
+        const celebs = filterCelebrityCatalog(
+          details
+            .filter(d => !seenNames.has(d.name))
+            .map(d => {
+              seenNames.add(d.name);
+              return buildCelebrity(d, catMap[d.name] || 'Actor');
+            })
+        );
 
         seedResults.push(...celebs);
         addBatch(celebs);
@@ -138,12 +150,14 @@ export function useCelebrities() {
         const catMapDisc = Object.fromEntries(batch.map(b => [b.title, b.category]));
         const details    = await fetchPageDetails(batch.map(b => b.title));
 
-        const celebs = details
-          .filter(d => !seenNames.has(d.name))
-          .map(d => {
-            seenNames.add(d.name);
-            return buildCelebrity(d, catMapDisc[d.name] || 'Actor');
-          });
+        const celebs = filterCelebrityCatalog(
+          details
+            .filter(d => !seenNames.has(d.name))
+            .map(d => {
+              seenNames.add(d.name);
+              return buildCelebrity(d, catMapDisc[d.name] || 'Actor');
+            })
+        );
 
         allResults.push(...celebs);
         addBatch(celebs);
@@ -162,12 +176,14 @@ export function useCelebrities() {
         'thriller writer', 'biography writer', 'memoir author',
       ];
       const olAuthors = await fetchOpenLibraryAuthors(authorQueries);
-      const olCelebs  = olAuthors
-        .filter(a => !seenNames.has(a.name))
-        .map(a => {
-          seenNames.add(a.name);
-          return buildCelebrity(a, 'Creator');
-        });
+      const olCelebs  = filterCelebrityCatalog(
+        olAuthors
+          .filter(a => !seenNames.has(a.name))
+          .map(a => {
+            seenNames.add(a.name);
+            return buildCelebrity(a, 'Creator');
+          })
+      );
 
       allResults.push(...olCelebs);
       if (olCelebs.length) addBatch(olCelebs);
@@ -175,7 +191,7 @@ export function useCelebrities() {
       if (cancelled) return;
 
       // ── 6. Cache ───────────────────────────────────────────────────────
-      const final = allResults.slice(0, 2000);
+      const final = filterCelebrityCatalog(allResults).slice(0, 2000);
       try {
         localStorage.setItem(CACHE_KEY, JSON.stringify({ data: final, ts: Date.now() }));
       } catch { /* storage full — skip */ }

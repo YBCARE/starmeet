@@ -222,6 +222,28 @@ function getPostText(celeb, rng) {
   return pick(pool, rng);
 }
 
+/** Varied feed imagery — not the same headshot on every post */
+function postImageFor(celeb, absIdx, isVideo = false) {
+  const id = celeb?.id ?? absIdx;
+  const seed = `sm_${id}_${absIdx}_${celeb?.category || 'post'}`;
+  const w = isVideo ? 720 : 600;
+  const h = isVideo ? 405 : absIdx % 5 === 2 ? 750 : 680;
+  if (absIdx % 4 === 0 && celeb?.image && !String(celeb.image).includes('ui-avatars')) {
+    return celeb.image;
+  }
+  return `https://picsum.photos/seed/${encodeURIComponent(seed)}/${w}/${h}`;
+}
+
+function shuffleCelebs(list, seed = 42) {
+  const out = [...list];
+  const rng = seeded(seed);
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 function generatePost(celebrities, absIdx, priorityFirst) {
   let celeb;
   if (priorityFirst && absIdx < priorityFirst.length) {
@@ -274,7 +296,7 @@ function generatePost(celebrities, absIdx, priorityFirst) {
     isVideo,
     videoDur,
     text:    getPostText(celeb, rng),
-    image:   celeb?.image || `https://picsum.photos/seed/p${absIdx}/600/520`,
+    image:   postImageFor(celeb, absIdx, isVideo),
     likes,
     commCnt,
     comments,
@@ -366,7 +388,7 @@ function StoryViewer({ stories, startIndex, onClose }) {
 
       {/* Story image — full screen portrait */}
       <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
-        <img src={current?.image || av(current?.name)} alt=""
+        <img src={postImageFor(current, idx + 1)} alt=""
           style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top center', display:'block' }}
           onError={e=>{e.currentTarget.src=av(current?.name)}} />
         {/* Vignette */}
@@ -411,7 +433,10 @@ function StoryViewer({ stories, startIndex, onClose }) {
 
 // ─── Stories Row ─────────────────────────────────────────────────────────────
 function StoriesRow({ celebrities }) {
-  const stories  = useMemo(() => celebrities.slice(0, 80), [celebrities]);
+  const stories  = useMemo(() => {
+    const daySeed = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+    return shuffleCelebs(celebrities, daySeed).slice(0, 80);
+  }, [celebrities]);
   const [viewing, setViewing] = useState(null); // index into stories
   const [seen,    setSeen]    = useState(() => {
     try { return JSON.parse(localStorage.getItem('sm_stories_seen')) || {}; } catch { return {}; }
@@ -904,7 +929,7 @@ export default function Feed() {
           let fi = 0;
           posts.forEach((post, i) => {
             mixed.push(post);
-            if ((i + 1) % 4 === 0 && fi < fanPosts.length) {
+            if ((i + 1) % 3 === 0 && fi < fanPosts.length) {
               mixed.push({ ...fanPosts[fi++], isFanPost: true });
             }
           });

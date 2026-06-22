@@ -4,8 +4,7 @@ import {
   Search, ArrowRight, Check, Star, Zap, Shield, MessageCircle, ChevronRight,
 } from 'lucide-react';
 import { useCelebContext } from '../context/CelebContext';
-import { celebrities as STATIC_CELEBS } from '../data/celebrities';
-import { celebPath, pickCategoryCeleb } from '../utils/celebrity';
+import { pickCategoryCeleb } from '../utils/celebrity';
 import CelebImage from '../components/CelebImage';
 import Navbar from '../components/Navbar';
 import './Landing.css';
@@ -22,7 +21,7 @@ const CATEGORY_DEFS = [
 ];
 
 function buildCategories(celebList) {
-  const all = celebList?.length ? celebList : STATIC_CELEBS;
+  const all = celebList?.length ? celebList : [];
   return CATEGORY_DEFS.map(def => {
     const celeb = pickCategoryCeleb(all, def);
     return {
