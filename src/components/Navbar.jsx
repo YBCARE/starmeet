@@ -98,12 +98,12 @@ function AuthNavbar() {
           ))}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', position: 'relative' }}>
-          <Link to="/create-post" className="sm-icon-btn" style={{ background: 'var(--sm-accent)', borderColor: 'transparent', color: '#fff' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', position: 'relative' }}>
+          <Link to="/create-post" className="sm-icon-btn mobile-hide-icons" style={{ background: 'var(--sm-accent)', borderColor: 'transparent', color: '#fff' }}>
             <Plus size={18} />
           </Link>
-          <Link to="/explore" className="sm-icon-btn" aria-label="Search"><Search size={16} /></Link>
-          <Link to="/messages" className="sm-icon-btn" aria-label="Messages" style={{ position: 'relative' }}>
+          <Link to="/explore" className="sm-icon-btn mobile-hide-icons" aria-label="Search"><Search size={16} /></Link>
+          <Link to="/messages" className="sm-icon-btn mobile-hide-icons" aria-label="Messages" style={{ position: 'relative' }}>
             <MessageCircle size={16} />
             {msgUnread > 0 && (
               <span style={{

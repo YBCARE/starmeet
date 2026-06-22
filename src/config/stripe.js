@@ -1,26 +1,30 @@
 // ─── Stripe Configuration ─────────────────────────────────────────────────────
 //
-// SETUP INSTRUCTIONS:
-// 1. Go to https://dashboard.stripe.com → Products → Create product
-// 2. Create two products: "Pro Fan" ($9/mo) and "Celebrity" ($29/mo)
-// 3. For each product, create a Payment Link (Payments → Payment Links)
-// 4. Set success URL to: https://YOUR-DOMAIN.com/upgrade-success?plan=pro
-// 5. Paste the Payment Link URLs below
+// 1. Copy .env.example → .env and paste your Stripe keys
+// 2. Stripe Dashboard → Products → create "Pro Fan" ($9/mo) and "Celebrity" ($29/mo)
+// 3. Create Payment Links for each product
+// 4. Set each Payment Link success URL to:
+//      https://starmeet.online/upgrade-success?plan=pro
+//      https://starmeet.online/upgrade-success?plan=celebrity
+// 5. Test card: 4242 4242 4242 4242 (test mode only)
 //
-// For testing: use Stripe test mode and test card 4242 4242 4242 4242
+// Vercel: add the same VITE_* vars in Project → Settings → Environment Variables
+
+const PLACEHOLDER = /REPLACE|YOUR_|pk_test_REPLACE/i;
+
+function env(key) {
+  const v = import.meta.env[key];
+  return typeof v === 'string' && v.trim() ? v.trim() : '';
+}
 
 export const STRIPE_CONFIG = {
-  // Your Stripe publishable key (starts with pk_live_ or pk_test_)
-  publishableKey: 'pk_test_REPLACE_WITH_YOUR_STRIPE_PUBLISHABLE_KEY',
+  publishableKey: env('VITE_STRIPE_PUBLISHABLE_KEY'),
 
-  // Payment Link URLs from your Stripe dashboard
-  // Go to: https://dashboard.stripe.com/payment-links
   paymentLinks: {
-    pro:       'https://buy.stripe.com/REPLACE_WITH_PRO_PAYMENT_LINK',
-    celebrity: 'https://buy.stripe.com/REPLACE_WITH_CELEBRITY_PAYMENT_LINK',
+    pro:       env('VITE_STRIPE_LINK_PRO'),
+    celebrity: env('VITE_STRIPE_LINK_CELEBRITY'),
   },
 
-  // Where Stripe redirects after successful payment (lazy — safe for build)
   get successUrl() {
     return typeof window !== 'undefined'
       ? `${window.location.origin}/upgrade-success`
@@ -62,14 +66,20 @@ export const STRIPE_CONFIG = {
   },
 };
 
-// Helper: redirect to Stripe Payment Link for a given plan
+export function isStripeConfigured(plan = 'pro') {
+  const key = STRIPE_CONFIG.publishableKey;
+  const link = STRIPE_CONFIG.paymentLinks[plan];
+  return !!(key && !PLACEHOLDER.test(key) && link && !PLACEHOLDER.test(link));
+}
+
+/** Redirect to Stripe Payment Link. Returns false if not configured (caller can simulate upgrade). */
 export function redirectToStripe(plan = 'pro') {
   const url = STRIPE_CONFIG.paymentLinks[plan];
-  if (!url || url.includes('REPLACE')) {
-    // Fallback for unconfigured keys: simulate upgrade
-    console.warn('[Starmeet] Stripe not configured. Simulating upgrade for development.');
-    return false; // caller should handle this
+  if (!isStripeConfigured(plan)) {
+    console.warn('[Starmeet] Stripe not configured — add keys to .env or Vercel env vars.');
+    return false;
   }
-  window.location.href = url;
+  const sep = url.includes('?') ? '&' : '?';
+  window.location.href = `${url}${sep}client_reference_id=starmeet_${plan}`;
   return true;
 }

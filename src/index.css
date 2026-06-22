@@ -28,6 +28,7 @@
   --sm-max-width: 935px;
   --sm-page-width: 1100px;
   --sm-nav-height: 60px;
+  --sm-bottom-nav-height: 0px;
   --sm-font: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
@@ -141,11 +142,79 @@ body {
 
 /* ── Mobile nav ──────────────────────────────────────────────────────────── */
 @media (max-width: 680px) {
+  :root { --sm-bottom-nav-height: 56px; }
   .desktop-nav { display: none !important; }
-  .mobile-menu-btn { display: flex !important; }
+  .mobile-menu-btn { display: none !important; }
+  .mobile-hide-icons { display: none !important; }
+  .sm-nav-inner { padding: 0 12px; gap: 8px; }
+  .sm-has-bottom-nav { padding-bottom: calc(var(--sm-bottom-nav-height) + env(safe-area-inset-bottom, 0px)); }
 }
 @media (min-width: 681px) {
   .mobile-menu-btn { display: none !important; }
+  .sm-bottom-nav { display: none !important; }
+}
+
+/* Instagram-style bottom tab bar (mobile) */
+.sm-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: calc(var(--sm-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(0, 0, 0, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--sm-border);
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+}
+.sm-bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-decoration: none;
+  color: var(--sm-text-faint);
+  padding: 6px 0 4px;
+  min-width: 0;
+  transition: color 0.15s;
+}
+.sm-bottom-nav-item.active { color: var(--sm-text); }
+.sm-bottom-nav-item.center {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  margin-top: -8px;
+  border-radius: 12px;
+  background: var(--sm-accent);
+  color: #fff;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 149, 246, 0.35);
+}
+.sm-bottom-nav-item.center.active { color: #fff; }
+.sm-bottom-nav-icon { position: relative; line-height: 0; display: flex; }
+.sm-bottom-nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; }
+.sm-bottom-nav-badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  background: var(--sm-accent);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #000;
+  padding: 0 3px;
 }
 
 /* ── Pro badge shimmer ─────────────────────────────────────────────────── */

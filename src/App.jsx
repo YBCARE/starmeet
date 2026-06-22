@@ -23,6 +23,7 @@ import UpgradeSuccess from './pages/UpgradeSuccess';
 import NotFound from './pages/NotFound';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import MobileBottomNav from './components/MobileBottomNav';
 
 const pv = {
   initial: { opacity: 0, y: 10 },
@@ -34,13 +35,15 @@ function AnimatedRoutes() {
   const location = useLocation();
   const noNavbar = ['/', '/login', '/signup', '/onboarding', '/upgrade-success', '/terms', '/privacy'].includes(location.pathname) ||
                    location.pathname.startsWith('/admin');
+  const showBottomNav = !noNavbar;
 
   return (
     <>
       {!noNavbar && <Navbar />}
-      <AnimatePresence mode="wait">
-        <motion.div key={location.pathname} variants={pv} initial="initial" animate="animate" exit="exit">
-          <Routes location={location}>
+      <div className={showBottomNav ? 'sm-app-shell sm-has-bottom-nav' : 'sm-app-shell'}>
+        <AnimatePresence mode="wait">
+          <motion.div key={location.pathname} variants={pv} initial="initial" animate="animate" exit="exit">
+            <Routes location={location}>
             <Route path="/"       element={<Landing />} />
             <Route path="/login"  element={<Login />} />
             <Route path="/signup" element={<Login />} />
@@ -64,6 +67,8 @@ function AnimatedRoutes() {
           </Routes>
         </motion.div>
       </AnimatePresence>
+      </div>
+      {showBottomNav && <MobileBottomNav />}
     </>
   );
 }

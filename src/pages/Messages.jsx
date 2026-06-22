@@ -733,9 +733,9 @@ export default function Messages() {
   const totalUnread = Object.keys(unreadIds).length;
 
   return (
-    <div className="msg-page">
+    <div className={`msg-page${showMobile ? ' chat-open' : ''}`}>
 
-      <div className={`msg-sidebar${showMobile ? ' hidden' : ''}`}>
+      <div className="msg-sidebar">
         <div className="msg-sidebar-head">
           <div className="msg-sidebar-top">
             <div className="msg-sidebar-title">
@@ -815,7 +815,7 @@ export default function Messages() {
         </div>
       </div>
 
-      <div className={`msg-chat-area${!showMobile && typeof window !== 'undefined' && window.innerWidth < 640 ? ' mobile-hidden' : ''}`}>
+      <div className="msg-chat-area">
         {!activeConvo ? (
           <div className="msg-chat-empty">
             <MessageCircle size={44} color="var(--sm-border)" />

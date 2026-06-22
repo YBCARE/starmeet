@@ -3,6 +3,8 @@
   color: var(--sm-text);
   background: var(--sm-bg);
 }
+
+/* ── Login ─────────────────────────────────────────────────────────────── */
 .sm-admin-login {
   min-height: 100vh;
   background: var(--sm-bg);
@@ -10,6 +12,7 @@
   align-items: center;
   justify-content: center;
   font-family: Inter, system-ui, sans-serif;
+  padding: 20px;
 }
 .sm-admin-login-card {
   width: 100%;
@@ -18,6 +21,7 @@
   border-radius: 20px;
   padding: 36px 28px;
   background: var(--sm-bg-elevated);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
 }
 .sm-admin-login-icon {
   width: 36px;
@@ -27,4 +31,160 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ── Layout ────────────────────────────────────────────────────────────── */
+.sm-admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+.sm-admin-main {
+  flex: 1;
+  padding: 28px;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────────────── */
+.sm-admin-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #050505;
+  border-right: 1px solid var(--sm-border);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+.sm-admin-sidebar-head {
+  padding: 20px 16px 14px;
+  border-bottom: 1px solid var(--sm-border);
+}
+.sm-admin-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sm-admin-sidebar-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--sm-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sm-admin-sidebar-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--sm-text);
+}
+.sm-admin-sidebar-sub {
+  font-size: 10px;
+  color: var(--sm-text-faint);
+}
+.sm-admin-nav {
+  flex: 1;
+  padding: 10px 8px;
+  overflow-y: auto;
+}
+.sm-admin-nav-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--sm-text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 400;
+  text-align: left;
+  font-family: inherit;
+  margin-bottom: 2px;
+  transition: background 0.15s, color 0.15s;
+}
+.sm-admin-nav-btn:hover {
+  background: var(--sm-bg-hover);
+  color: var(--sm-text-secondary);
+}
+.sm-admin-nav-btn.active {
+  background: var(--sm-bg-surface);
+  color: var(--sm-text);
+  font-weight: 600;
+}
+.sm-admin-sidebar-foot {
+  padding: 10px 8px;
+  border-top: 1px solid var(--sm-border);
+}
+
+/* ── Cards & stats ─────────────────────────────────────────────────────── */
+.sm-admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.sm-admin-stat {
+  background: var(--sm-bg-elevated);
+  border: 1px solid var(--sm-border);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.sm-admin-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sm-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.sm-admin-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--sm-text);
+}
+.sm-admin-section-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--sm-text);
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+}
+.sm-admin-section-sub {
+  font-size: 13px;
+  color: var(--sm-text-faint);
+  margin-bottom: 20px;
+}
+
+/* ── Mobile admin ──────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .sm-admin-layout { flex-direction: column; }
+  .sm-admin-sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid var(--sm-border);
+  }
+  .sm-admin-nav {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
+    padding: 8px 12px;
+    scrollbar-width: none;
+  }
+  .sm-admin-nav::-webkit-scrollbar { display: none; }
+  .sm-admin-nav-btn {
+    flex-shrink: 0;
+    width: auto;
+    white-space: nowrap;
+    padding: 8px 12px;
+  }
+  .sm-admin-sidebar-foot { display: none; }
+  .sm-admin-main { padding: 16px 14px 24px; }
 }

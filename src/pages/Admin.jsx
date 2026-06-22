@@ -95,37 +95,36 @@ const NAV = [
 
 function Sidebar({ active, setActive, onLogout }) {
   return (
-    <div style={{ width:220, flexShrink:0, background:'#050505', borderRight:'1px solid #111', display:'flex', flexDirection:'column', height:'100vh', position:'sticky', top:0 }}>
-      <div style={{ padding:'20px 16px 14px', borderBottom:'1px solid #111' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ width:30, height:30, borderRadius:8, background:'#0095f6', display:'flex', alignItems:'center', justifyContent:'center' }}>
+    <aside className="sm-admin-sidebar">
+      <div className="sm-admin-sidebar-head">
+        <div className="sm-admin-sidebar-brand">
+          <div className="sm-admin-sidebar-icon">
             <Shield size={15} color="white" />
           </div>
           <div>
-            <div style={{ fontSize:14, fontWeight:800, color:'#fff' }}>Admin Panel</div>
-            <div style={{ fontSize:10, color:'#555' }}>Starmeet</div>
+            <div className="sm-admin-sidebar-title">Admin Panel</div>
+            <div className="sm-admin-sidebar-sub">Starmeet</div>
           </div>
         </div>
       </div>
-      <nav style={{ flex:1, padding:'10px 8px', overflowY:'auto' }}>
+      <nav className="sm-admin-nav">
         {NAV.map(n => (
-          <button key={n.key} onClick={()=>setActive(n.key)} style={{
-            width:'100%', display:'flex', alignItems:'center', gap:10, padding:'9px 10px', borderRadius:8,
-            background: active===n.key ? '#1a1a1a' : 'transparent',
-            border:'none', color: active===n.key ? '#fff' : '#666', cursor:'pointer',
-            fontSize:13, fontWeight: active===n.key ? 600 : 400, textAlign:'left',
-            fontFamily:'inherit', marginBottom:2,
-          }}>
+          <button
+            key={n.key}
+            type="button"
+            onClick={() => setActive(n.key)}
+            className={`sm-admin-nav-btn${active === n.key ? ' active' : ''}`}
+          >
             <n.icon size={16} /> {n.label}
           </button>
         ))}
       </nav>
-      <div style={{ padding:'10px 8px', borderTop:'1px solid #111' }}>
-        <button onClick={onLogout} style={{ ...s.btnGhost, width:'100%', justifyContent:'center', color:'#e05252' }}>
+      <div className="sm-admin-sidebar-foot">
+        <button type="button" onClick={onLogout} style={{ ...s.btnGhost, width:'100%', justifyContent:'center', color:'#e05252' }}>
           <LogOut size={14} /> Log out
         </button>
       </div>
-    </div>
+    </aside>
   );
 }
 
@@ -1199,9 +1198,9 @@ export default function Admin() {
   const allCelebs = [...addedCelebs, ...celebrities];
 
   return (
-    <div className="sm-admin" style={{ display:'flex', minHeight:'100vh' }}>
+    <div className="sm-admin sm-admin-layout">
       <Sidebar active={section} setActive={setSection} onLogout={adminLogout} />
-      <main style={{ flex:1, padding:28, overflowY:'auto' }}>
+      <main className="sm-admin-main">
         {section==='dashboard'   && <Dashboard celebrities={allCelebs} fans={fansDb} fanPosts={fanPosts} adminPosts={adminPosts} overrides={overrides} />}
         {section==='celebrities' && <CelebrityManagement celebrities={celebrities} overrides={overrides} addedCelebs={addedCelebs} updateCeleb={updateCeleb} deleteCeleb={deleteCeleb} addCeleb={addCeleb} />}
         {section==='posts'       && <PostManagement celebrities={allCelebs} adminPosts={adminPosts} addAdminPost={addAdminPost} updatePost={updatePost} deletePost={deletePost} postOvr={postOvr} />}

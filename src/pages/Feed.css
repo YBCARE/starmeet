@@ -6,7 +6,7 @@
 .feed-inner {
   max-width: 620px;
   margin: 0 auto;
-  padding: 16px 14px 60px;
+  padding: 16px 14px calc(24px + var(--sm-bottom-nav-height));
 }
 
 /* Tabs */
