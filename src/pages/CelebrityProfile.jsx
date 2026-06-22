@@ -4,9 +4,9 @@ import { Check, Grid3x3, Play, Info, ChevronLeft, Heart, MessageCircle, X, Share
 import { useCelebContext } from '../context/CelebContext';
 import { useAuth } from '../context/AuthContext';
 import { getSomeFans, getFakeFans } from '../services/fakeFans';
-import { fetchCelebPhotos, fetchCelebBio } from '../services/wikiPhotos';
+import { fetchCelebPhotos, fetchCelebBio, dedupePhotoUrls } from '../services/wikiPhotos';
 import { useMeta } from '../hooks/useMeta';
-import { findCelebrity, celebPath, celebStableId, celebDisplayImage } from '../utils/celebrity';
+import { findCelebrity, celebPath, celebDisplayImage } from '../utils/celebrity';
 import CelebImage from '../components/CelebImage';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ export default function CelebrityProfile() {
       fetchCelebPhotos(celeb.name, 20),
       fetchCelebBio(celeb.name),
     ]).then(([photos, bio]) => {
-      setGridPhotos(photos);
+      setGridPhotos(dedupePhotoUrls(photos));
       if (bio) setWikiBio(bio);
       setPhotosLoading(false);
     }).catch(() => setPhotosLoading(false));
@@ -237,16 +237,22 @@ export default function CelebrityProfile() {
   const followerCount = getFollowerCount(celeb?.name || '');
   const dmIds      = useMemo(() => celeb ? getDMIds(celeb.name) : [], [celeb]);
 
-  // Build grid posts — only as many as unique photos we have (no duplicates)
+  // Build grid — one post per unique photo only (never repeat the same image)
+  const uniquePhotos = useMemo(() => {
+    const merged = dedupePhotoUrls([
+      ...gridPhotos,
+      ...(celeb?.image ? [celeb.image] : []),
+    ]);
+    return merged;
+  }, [gridPhotos, celeb?.image]);
+
   const gridPosts = useMemo(() => {
-    if (!celeb) return [];
-    const count = Math.max(gridPhotos.length, 9);
-    return Array.from({ length: count }, (_, i) => {
+    if (!celeb || !uniquePhotos.length) return [];
+    return uniquePhotos.map((image, i) => {
       const r = seeded(seed * 31 + i * 97);
-      const fallbackImg = `https://picsum.photos/seed/${celebStableId(celeb)}_${i}/640/640`;
       return {
         id:      `gp_${i}`,
-        image:   gridPhotos[i] ?? celeb?.image ?? fallbackImg,
+        image,
         isVideo: false,
         likes:   ri(10000, 900000, r),
         commCnt: ri(100, 5000, r),
@@ -261,7 +267,7 @@ export default function CelebrityProfile() {
         })),
       };
     });
-  }, [celeb, seed, gridPhotos]);
+  }, [celeb, seed, uniquePhotos]);
 
   const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=111&color=aaa&size=200`;
   const following = isFollowing(celeb?.id);
@@ -358,7 +364,7 @@ export default function CelebrityProfile() {
               <div style={{ fontSize:12, color:'#0095f6', fontWeight:600, marginBottom:10 }}>{celeb.category}</div>
               <div style={{ display:'flex', gap:24, marginBottom:14 }}>
                 {[
-                  { label:'Posts',     val: photosLoading ? '…' : String(gridPhotos.length || 1), onClick: null },
+                  { label:'Posts',     val: photosLoading ? '…' : String(uniquePhotos.length || 0), onClick: null },
                   { label:'Followers', val: fmtNum(followerCount + (following ? 1 : 0)), onClick: () => setShowFollowers(true) },
                   { label:'Following', val: fmtNum(ri(200, 800, seeded(seed + 5))),       onClick: null },
                 ].map(s => (
