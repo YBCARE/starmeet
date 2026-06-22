@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   loadAll, saveAll, convoId, updateConvoStatus,
   getConvosForUser, subscribeToConvos, syncConvosFromFirestore, appendMessage, uid,
+  isAutoReplyEnabled,
 } from '../services/messageStore';
 import { celebPath } from '../utils/celebrity';
 import { redirectToStripe } from '../config/stripe';
@@ -659,8 +660,8 @@ export default function Messages() {
     appendMessage(cid, newMsg);
     refreshConvos();
 
-    // Smart auto-reply for celebs — ALWAYS replies, no message limit
-    if (convo.with?.type === 'celeb') {
+    // Smart auto-reply for celebs — until admin takes over the chat
+    if (convo.with?.type === 'celeb' && isAutoReplyEnabled(convo)) {
       const celebCategory = convo.with?.category || '';
       setTypingConvoId(cid);
 
@@ -668,6 +669,12 @@ export default function Messages() {
       const baseDelay = 1500 + Math.random() * 2500 + Math.min((text?.length || 0) * 20, 1000);
 
       setTimeout(() => {
+        const latest = loadAll()[cid];
+        if (!latest || !isAutoReplyEnabled(latest)) {
+          setTypingConvoId(prev => (prev === cid ? null : prev));
+          return;
+        }
+
         setTypingConvoId(null);
         const reply = getSmartReply(text, celebCategory);
         appendMessage(cid, { id: uid(), from:'them', text: reply, timestamp: Date.now() });
@@ -690,8 +697,16 @@ export default function Messages() {
         if (Math.random() < 0.30) {
           const followDelay = 5000 + Math.random() * 7000;
           setTimeout(() => {
+            const still = loadAll()[cid];
+            if (!still || !isAutoReplyEnabled(still)) return;
+
             setTypingConvoId(cid);
             setTimeout(() => {
+              const again = loadAll()[cid];
+              if (!again || !isAutoReplyEnabled(again)) {
+                setTypingConvoId(prev => (prev === cid ? null : prev));
+                return;
+              }
               setTypingConvoId(null);
               const followup = pick(FOLLOWUP_MESSAGES);
               appendMessage(cid, { id: uid(), from:'them', text: followup, timestamp: Date.now() });

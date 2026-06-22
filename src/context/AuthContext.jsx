@@ -27,6 +27,29 @@ function save(key, val) {
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
+function firebaseAuthError(e, action = 'sign in') {
+  if (e?.code === 'auth/unauthorized-domain') {
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    return [
+      e.message || 'This domain is not authorized for Firebase Auth.',
+      host ? `Your browser is on: ${host}` : '',
+      'In project starmeet-99b71 → Authentication → Settings → Authorized domains, add that exact hostname (and www if you use both).',
+      'Also check Google Cloud → Credentials → API key HTTP referrers if you restricted the key.',
+    ].filter(Boolean).join(' ');
+  }
+  if (e?.code === 'auth/operation-not-allowed') {
+    return 'Email/password sign-in is disabled. Enable it in Firebase Console → Authentication → Sign-in method.';
+  }
+  if (e?.code === 'auth/email-already-in-use') return 'Email already registered';
+  if (e?.code === 'auth/weak-password') return 'Password too weak (min 6 chars)';
+  if (e?.code === 'auth/user-not-found' || e?.code === 'auth/invalid-credential' || e?.code === 'auth/invalid-email') {
+    return 'No account found with this email';
+  }
+  if (e?.code === 'auth/wrong-password') return 'Incorrect password';
+  if (e?.code === 'auth/popup-closed-by-user' || e?.code === 'auth/cancelled-popup-request') return 'Sign-in cancelled';
+  return e?.message || `Could not ${action}`;
+}
+
 // Upload base64 avatar to Firebase Storage; returns download URL
 async function uploadAvatar(userId, base64) {
   if (!base64 || !base64.startsWith('data:')) return base64; // already a URL or null
@@ -147,10 +170,7 @@ export function AuthProvider({ children }) {
       console.log('[Starmeet] ✅ Firebase Auth user created! UID:', fbUser.uid);
     } catch (e) {
       console.error('[Starmeet] ❌ Firebase Auth error:', e.code, e.message);
-      if (e.code === 'auth/email-already-in-use') return { error: 'Email already registered' };
-      if (e.code === 'auth/weak-password')        return { error: 'Password too weak (min 6 chars)' };
-      if (e.code === 'auth/operation-not-allowed') return { error: 'Email/password sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in method.' };
-      return { error: e.message || 'Signup failed' };
+      return { error: firebaseAuthError(e, 'sign up') };
     }
 
     // ── Step 3: upload avatar (non-blocking — fallback to base64) ─────────
@@ -225,11 +245,7 @@ export function AuthProvider({ children }) {
       console.log('[Starmeet] ✅ Firebase Auth sign-in success! UID:', fbUser.uid);
     } catch (e) {
       console.error('[Starmeet] ❌ Login error:', e.code, e.message);
-      if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-email')
-        return { error: 'No account found with this email' };
-      if (e.code === 'auth/wrong-password')
-        return { error: 'Incorrect password' };
-      return { error: e.message || 'Login failed' };
+      return { error: firebaseAuthError(e, 'sign in') };
     }
 
     // ── Step 2: Load Firestore profile (non-blocking) ─────────────────────
@@ -300,9 +316,7 @@ export function AuthProvider({ children }) {
 
       return { success: true };
     } catch (e) {
-      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')
-        return { error: 'Sign-in cancelled' };
-      return { error: e.message || 'Google sign-in failed' };
+      return { error: firebaseAuthError(e, 'sign in with Google') };
     }
   }
 

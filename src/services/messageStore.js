@@ -10,6 +10,32 @@ import { db } from '../firebase';
 
 const LS_KEY = 'sm_convos_v3';
 
+// Merge two convo snapshots (local cache vs Firestore)
+function mergeConvos(local, remote) {
+  if (!local) return remote;
+  if (!remote) return local;
+  const useRemote = (remote.updatedAt || 0) >= (local.updatedAt || 0);
+  const base = useRemote ? { ...local, ...remote } : { ...remote, ...local };
+
+  const localMsgs = local.messages || [];
+  const remoteMsgs = remote.messages || [];
+  if (remoteMsgs.length > localMsgs.length) base.messages = remoteMsgs;
+  else if (localMsgs.length > remoteMsgs.length) base.messages = localMsgs;
+
+  const remoteTakeover = remote.humanTakeoverAt || 0;
+  const localTakeover  = local.humanTakeoverAt || 0;
+  if (remoteTakeover >= localTakeover) {
+    base.humanTakeover   = !!remote.humanTakeover;
+    base.humanTakeoverAt = remote.humanTakeoverAt || null;
+  } else {
+    base.humanTakeover   = !!local.humanTakeover;
+    base.humanTakeoverAt = local.humanTakeoverAt || null;
+  }
+
+  base.updatedAt = Math.max(local.updatedAt || 0, remote.updatedAt || 0);
+  return base;
+}
+
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 export function loadAll() {
   try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; }
@@ -54,11 +80,8 @@ export async function syncConvosFromFirestore(myId) {
     const all = loadAll();
     snap.docs.forEach(d => {
       const c = d.data();
-      // Merge: keep whichever has more messages / is newer
       const existing = all[c.id];
-      if (!existing || c.updatedAt > (existing.updatedAt || 0)) {
-        all[c.id] = c;
-      }
+      all[c.id] = existing ? mergeConvos(existing, c) : c;
     });
     saveAll(all);
   } catch {}
@@ -76,7 +99,8 @@ export function subscribeToConvos(myId, onUpdate) {
       const all = loadAll();
       snap.docs.forEach(d => {
         const c = d.data();
-        all[c.id] = c;
+        const existing = all[c.id];
+        all[c.id] = existing ? mergeConvos(existing, c) : c;
       });
       saveAll(all);
       onUpdate(Object.values(all).filter(c => c.participants?.includes(myId)));
@@ -87,6 +111,66 @@ export function subscribeToConvos(myId, onUpdate) {
   } catch {
     return () => {};
   }
+}
+
+/** Admin: pull every conversation from Firestore */
+export async function syncAllConvosFromFirestore() {
+  if (!db) return Object.values(loadAll());
+  try {
+    const snap = await getDocs(collection(db, 'conversations'));
+    const all = loadAll();
+    snap.docs.forEach(d => {
+      const c = d.data();
+      const existing = all[c.id];
+      all[c.id] = existing ? mergeConvos(existing, c) : c;
+    });
+    saveAll(all);
+    return Object.values(all);
+  } catch {
+    return Object.values(loadAll());
+  }
+}
+
+/** Admin: real-time listener for all conversations */
+export function subscribeToAllConvos(onUpdate) {
+  if (!db) return () => {};
+  try {
+    return onSnapshot(
+      collection(db, 'conversations'),
+      (snap) => {
+        const all = loadAll();
+        snap.docs.forEach(d => {
+          const c = d.data();
+          const existing = all[c.id];
+          all[c.id] = existing ? mergeConvos(existing, c) : c;
+        });
+        saveAll(all);
+        onUpdate(Object.values(all));
+      },
+      () => onUpdate(Object.values(loadAll()))
+    );
+  } catch {
+    return () => {};
+  }
+}
+
+export function isAutoReplyEnabled(convo) {
+  return !convo?.humanTakeover;
+}
+
+/** When admin replies manually, auto-reply stops for this chat */
+export function setHumanTakeover(cid, enabled) {
+  const all = loadAll();
+  if (!all[cid]) return null;
+  const patch = {
+    humanTakeover:   !!enabled,
+    humanTakeoverAt: enabled ? Date.now() : null,
+    updatedAt:       Date.now(),
+  };
+  all[cid] = { ...all[cid], ...patch };
+  saveAll(all);
+  fsPatch(cid, patch);
+  return all[cid];
 }
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────

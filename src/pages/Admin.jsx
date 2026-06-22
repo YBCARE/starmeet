@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Star, Film, MessageCircle, Heart,
@@ -10,7 +10,10 @@ import { useCelebContext } from '../context/CelebContext';
 import { useAdmin } from '../context/AdminContext';
 import { useAuth } from '../context/AuthContext';
 import { useFanPosts } from '../context/FanPostContext';
-import { loadAll, saveAll, appendMessage, updateConvoStatus, uid as msUid } from '../services/messageStore';
+import {
+  loadAll, saveAll, appendMessage, updateConvoStatus, uid as msUid,
+  setHumanTakeover, syncAllConvosFromFirestore, subscribeToAllConvos, isAutoReplyEnabled,
+} from '../services/messageStore';
 import './Admin.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -919,33 +922,69 @@ function fmtTime(ts) {
   return d.toLocaleDateString([],{month:'short',day:'numeric'});
 }
 
+function isCelebConvo(c) {
+  return c?.with?.type === 'celeb';
+}
+
 // ─── Admin Messages Control ───────────────────────────────────────────────────
 function AdminMessages({ celebrities }) {
-  const [allConvos,  setAllConvos]  = useState(() => Object.values(loadAll()));
+  const [allConvos,  setAllConvos]  = useState(() => Object.values(loadAll()).filter(isCelebConvo));
   const [activeConvo, setActive]    = useState(null);
   const [replyText,   setReplyText] = useState('');
-  const [tab,         setTab]       = useState('all'); // 'all' | 'requests' | 'broadcast'
+  const [tab,         setTab]       = useState('all');
   const [broadcastCeleb, setBCeleb] = useState('');
   const [broadcastText,  setBText]  = useState('');
   const [typing,      setTyping]    = useState(false);
+  const [syncing,     setSyncing]   = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSyncing(true);
+    syncAllConvosFromFirestore().then(convos => {
+      if (!cancelled) {
+        setAllConvos(convos.filter(isCelebConvo).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)));
+        setSyncing(false);
+      }
+    });
+    const unsub = subscribeToAllConvos(convos => {
+      if (!cancelled) {
+        const sorted = convos.filter(isCelebConvo).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        setAllConvos(sorted);
+        setSyncing(false);
+      }
+    });
+    return () => { cancelled = true; unsub(); };
+  }, []);
+
+  useEffect(() => {
+    if (!activeConvo) return;
+    const fresh = allConvos.find(c => c.id === activeConvo.id);
+    if (fresh) setActive(fresh);
+  }, [allConvos, activeConvo?.id]);
 
   function refresh() {
-    setAllConvos(Object.values(loadAll()));
+    syncAllConvosFromFirestore().then(convos => {
+      setAllConvos(convos.filter(isCelebConvo).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)));
+    });
   }
 
   function replyAsCeleb() {
     if (!activeConvo || !replyText.trim()) return;
     const cid = activeConvo.id;
-    // Show typing for 2s, then deliver the message
+    setHumanTakeover(cid, true);
     setTyping(true);
     setTimeout(() => {
       setTyping(false);
       const msg = { id: msUid(), from:'them', text: replyText.trim(), timestamp: Date.now() };
       const updated = appendMessage(cid, msg);
       setReplyText('');
-      refresh();
       if (updated) setActive(updated);
     }, 2000);
+  }
+
+  function resumeAutoReply(cid) {
+    const updated = setHumanTakeover(cid, false);
+    if (updated) setActive(updated);
   }
 
   function acceptRequest(cid) {
@@ -966,29 +1005,30 @@ function AdminMessages({ celebrities }) {
     let count = 0;
     Object.values(all).forEach(c => {
       if (c.with?.id === celeb.id && c.with?.type === 'celeb') {
-        const msg = { id: msUid(), from:'them', text: broadcastText.trim(), timestamp: Date.now() };
-        c.messages = [...(c.messages||[]), msg];
-        c.updatedAt = Date.now();
+        appendMessage(c.id, { id: msUid(), from:'them', text: broadcastText.trim(), timestamp: Date.now() });
         count++;
       }
     });
-    saveAll(all);
-    refresh();
     alert(`Broadcast sent to ${count} conversation(s) as ${celeb.name}`);
     setBText('');
   }
 
-  const requests = allConvos.filter(c=>c.status==='request');
-  const active   = allConvos.filter(c=>c.status==='active');
-  const shown    = tab==='requests' ? requests : active;
+  const requests = allConvos.filter(c => c.status === 'request');
+  const active   = allConvos.filter(c => c.status !== 'declined');
+  const live     = active.filter(c => c.humanTakeover);
+  const shown    = tab === 'requests' ? requests : active;
 
   return (
     <div>
-      <h1 style={{ fontSize:22, fontWeight:800, color:'#fff', marginBottom:16 }}>Messages Control</h1>
+      <h1 style={{ fontSize:22, fontWeight:800, color:'#fff', marginBottom:8 }}>Messages Control</h1>
+      <p style={{ fontSize:13, color:'#666', marginBottom:16 }}>
+        Auto-reply runs until you send a manual reply. Then you control the chat.
+        {syncing ? ' Syncing from cloud…' : ` ${active.length} conversations · ${live.length} live`}
+      </p>
 
       {/* Tabs */}
-      <div style={{ display:'flex', gap:8, marginBottom:20, borderBottom:'1px solid #111', paddingBottom:12 }}>
-        {[['all',`All Active (${active.length})`],['requests',`Requests (${requests.length})`],['broadcast','Broadcast']].map(([k,l]) => (
+      <div style={{ display:'flex', gap:8, marginBottom:20, borderBottom:'1px solid #111', paddingBottom:12, flexWrap:'wrap' }}>
+        {[['all',`All (${active.length})`],['requests',`Requests (${requests.length})`],['broadcast','Broadcast']].map(([k,l]) => (
           <button key={k} onClick={()=>setTab(k)} style={{
             padding:'7px 16px', borderRadius:8, border:'none', cursor:'pointer', fontFamily:'inherit', fontSize:13, fontWeight:600,
             background: tab===k ? '#0095f6' : '#1a1a1a', color: tab===k ? '#fff' : '#666',
@@ -1033,7 +1073,16 @@ function AdminMessages({ celebrities }) {
                     <img src={c.with?.image||av(c.with?.name)} alt="" style={{ width:34, height:34, borderRadius:'50%', objectFit:'cover', objectPosition:'top' }}
                       onError={e=>{e.currentTarget.src=av(c.with?.name)}}/>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:'#fff' }}>{c.with?.name}</div>
+                      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                        <span style={{ fontSize:13, fontWeight:600, color:'#fff' }}>{c.with?.name}</span>
+                        <span style={{
+                          fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:4,
+                          background: c.humanTakeover ? 'rgba(16,185,129,0.15)' : 'rgba(100,100,100,0.15)',
+                          color: c.humanTakeover ? '#10b981' : '#666',
+                        }}>
+                          {c.humanTakeover ? 'LIVE' : 'AUTO'}
+                        </span>
+                      </div>
                       <div style={{ fontSize:11, color:'#555', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                         {c.messages.filter(m=>m.from!=='system').slice(-1)[0]?.text?.slice(0,30) || 'No messages'}
                       </div>
@@ -1059,8 +1108,16 @@ function AdminMessages({ celebrities }) {
                     onError={e=>{e.currentTarget.src=av(activeConvo.with?.name)}}/>
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{activeConvo.with?.name}</div>
-                    <div style={{ fontSize:11, color:'#555' }}>Fan conversation · {activeConvo.messages.length} messages</div>
+                    <div style={{ fontSize:11, color: activeConvo.humanTakeover ? '#10b981' : '#888' }}>
+                      {activeConvo.humanTakeover ? 'You are replying — auto-reply is OFF' : 'Auto-reply ON until you send a message'}
+                      {' · '}{activeConvo.messages.length} messages
+                    </div>
                   </div>
+                  {activeConvo.humanTakeover ? (
+                    <button onClick={() => resumeAutoReply(activeConvo.id)} style={s.btnGhost}>
+                      Resume auto-reply
+                    </button>
+                  ) : null}
                   {activeConvo.status==='request' && (
                     <div style={{ display:'flex', gap:6 }}>
                       <button onClick={()=>acceptRequest(activeConvo.id)} style={s.btn('#10b981')}><Check size={13}/> Accept</button>
@@ -1097,7 +1154,7 @@ function AdminMessages({ celebrities }) {
                 {/* Reply as celebrity */}
                 <div style={{ padding:'10px 14px', borderTop:'1px solid #111' }}>
                   <div style={{ fontSize:11, color:'#0095f6', fontWeight:600, marginBottom:6 }}>
-                    Reply as {activeConvo.with?.name} (celebrity)
+                    Reply as {activeConvo.with?.name} — turns off auto-reply for this fan
                   </div>
                   <div style={{ display:'flex', gap:8 }}>
                     <input value={replyText} onChange={e=>setReplyText(e.target.value)}
@@ -1108,7 +1165,9 @@ function AdminMessages({ celebrities }) {
                       {typing ? <RefreshCw size={14} style={{ animation:'spin 1s linear infinite' }}/> : <><Send size={13}/> Send</>}
                     </button>
                   </div>
-                  <div style={{ fontSize:11, color:'#555', marginTop:5 }}>Fan sees this as a real reply from the celebrity. Typing indicator appears for 2 seconds first.</div>
+                  <div style={{ fontSize:11, color:'#555', marginTop:5 }}>
+                    Fan sees this as a real reply. Auto-reply stops after your first manual message.
+                  </div>
                 </div>
               </>
             )}
