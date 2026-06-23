@@ -6,7 +6,7 @@ import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey:            "AIzaSyBdSCjLIp02OtruF5V0XHtWNeMKdmgjoNA",
-  authDomain:        "starmeet-99b71.firebaseapp.com",
+  authDomain:        "starmeet.online",
   projectId:         "starmeet-99b71",
   storageBucket:     "starmeet-99b71.firebasestorage.app",
   messagingSenderId: "635091525831",
@@ -14,7 +14,7 @@ const firebaseConfig = {
   measurementId:     "G-W9S5T4RQ0D",
 };
 
-console.log('[Firebase] Initializing app with project:', firebaseConfig.projectId);
+console.log('[Firebase] authDomain:', firebaseConfig.authDomain, '| project:', firebaseConfig.projectId);
 
 let app, auth, db, storage;
 

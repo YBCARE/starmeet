@@ -1,9 +1,17 @@
 {
   "rewrites": [
     {
-      "source": "/__/auth/:path*",
-      "destination": "https://starmeet-99b71.firebaseapp.com/__/auth/:path*"
+      "source": "/__/auth/(.*)",
+      "destination": "https://starmeet-99b71.firebaseapp.com/__/auth/$1"
     },
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/__/auth/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    }
   ]
 }
