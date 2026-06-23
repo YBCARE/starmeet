@@ -1,0 +1,7 @@
+path=C:\Users\USER\starmeet\public\starmeet-oauth-logo.png
+bytes=5794
+width=120
+height=120
+kb=5.66
+source=C:/Users/USER/.cursor/projects/empty-window/assets/starmeet-google-120.png
+google_oauth=OK (120x120, max 1MB)

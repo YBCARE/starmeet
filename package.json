@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate-oauth-logo": "node scripts/generate-oauth-logo.mjs"
   },
   "dependencies": {
     "@stripe/stripe-js": "^9.8.0",

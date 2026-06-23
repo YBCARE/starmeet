@@ -23,20 +23,11 @@ After deploy, check on your phone:
 
 ---
 
-## Low: Google sign-in shows starmeet.online (not firebaseapp.com)
+## Google sign-in branding
 
-Google popup text comes from Firebase **authDomain**. To show your domain:
+**Full guide:** see [`SETUP-GOOGLE-BRANDING.md`](./SETUP-GOOGLE-BRANDING.md)
 
-1. [Firebase Console](https://console.firebase.google.com) → Hosting → connect **starmeet.online**
-2. Add DNS records Firebase gives you (A/CNAME)
-3. Authentication → Settings → Authorized domains → add `starmeet.online`
-4. Update `src/firebase.js`:
-   ```js
-   authDomain: "starmeet.online",
-   ```
-5. Redeploy
-
-**Note:** Site can stay on Vercel; Firebase Hosting is mainly for the auth domain. Alternative: keep `firebaseapp.com` in popup (works fine, just less branded).
+Quick version: Firebase authorized domains → Google OAuth app name “Starmeet” → change `authDomain` to `starmeet.online` in `src/firebase.js` → deploy. Vercel auth proxy is already in `vercel.json`.
 
 ---
 
