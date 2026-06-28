@@ -68,7 +68,7 @@ function EditProfileModal({ user, onSave, onClose }) {
 
 export default function UserProfile() {
   const { fanId } = useParams(); // if undefined → own profile
-  const { user, logout, updateProfile, getFanById, isFanFollowing, toggleFanFollow, getFanFollowers, fanFollows, follows, celebFollows, isPro, upgradeToPro } = useAuth();
+  const { user, logout, updateProfile, getFanById, isFanFollowing, toggleFanFollow, getFanFollowers, fanFollows, follows, celebFollows, isPro, upgradeToPro, blockUser, isBlocked } = useAuth();
   const { getPostsByUser, fanPosts } = useFanPosts();
   const { celebrities } = useCelebContext();
   const navigate = useNavigate();
@@ -168,6 +168,11 @@ export default function UserProfile() {
                 </>
               ) : (
                 <>
+                  {!isBlocked(profileUser.id) ? (
+                    <button onClick={() => blockUser(profileUser.id)} style={{ padding:'8px 14px', background:'#1a1a1a', border:'1px solid #333', borderRadius:8, color:'#888', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                      Block
+                    </button>
+                  ) : null}
                   <button onClick={() => toggleFanFollow(profileUser.id)} style={{ padding:'8px 20px', background: following ? '#1a1a1a' : '#0095f6', border: following ? '1px solid #333' : 'none', borderRadius:8, color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                     {following ? 'Following' : 'Follow'}
                   </button>

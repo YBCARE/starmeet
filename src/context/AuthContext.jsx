@@ -416,7 +416,6 @@ export function AuthProvider({ children }) {
 
   async function updateProfile(updates) {
     if (!user) return;
-    // Upload new avatar if base64
     let avatarUrl = updates.avatar;
     if (avatarUrl && avatarUrl.startsWith('data:')) {
       avatarUrl = await uploadAvatar(user.id, avatarUrl);
@@ -442,6 +441,22 @@ export function AuthProvider({ children }) {
 
     fsUpdateUser(user.id, updates);
   }
+
+  const blockUser = useCallback((fanId) => {
+    if (!user || !fanId || fanId === user.id) return;
+    const blocked = user.blockedUsers || [];
+    if (blocked.includes(fanId)) return;
+    updateProfile({ blockedUsers: [...blocked, fanId] });
+  }, [user]);
+
+  const unblockUser = useCallback((fanId) => {
+    if (!user) return;
+    updateProfile({ blockedUsers: (user.blockedUsers || []).filter(id => id !== fanId) });
+  }, [user]);
+
+  const isBlocked = useCallback((fanId) => {
+    return (user?.blockedUsers || []).includes(fanId);
+  }, [user]);
 
   // ── CELEBRITY FOLLOWS ────────────────────────────────────────────────────
   const toggleCelebFollow = useCallback((celebId) => {
@@ -585,6 +600,7 @@ export function AuthProvider({ children }) {
       user, isLoggedIn, authLoading, fansDb,
       signup, login, loginWithGoogle, logout, resetPassword, changePassword,
       hasPasswordLogin, usesGoogleLogin, updateProfile,
+      blockUser, unblockUser, isBlocked,
       // celeb follows (backwards compat)
       follows, celebFollows, toggleFollow, isFollowing, toggleCelebFollow, isCelebFollowing,
       // fan follows

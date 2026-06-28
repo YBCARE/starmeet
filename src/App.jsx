@@ -24,6 +24,9 @@ import NotFound from './pages/NotFound';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Settings from './pages/Settings';
+import PrivacyCentre from './pages/PrivacyCentre';
+import Policies from './pages/Policies';
+import LegalDoc from './pages/LegalDoc';
 import MobileBottomNav from './components/MobileBottomNav';
 
 const pv = {
@@ -34,7 +37,7 @@ const pv = {
 
 function AnimatedRoutes() {
   const location = useLocation();
-  const noNavbar = ['/', '/login', '/signup', '/onboarding', '/upgrade-success', '/terms', '/privacy'].includes(location.pathname) ||
+  const noNavbar = ['/', '/login', '/signup', '/onboarding', '/upgrade-success'].includes(location.pathname) ||
                    location.pathname.startsWith('/admin');
   const showBottomNav = !noNavbar;
 
@@ -50,6 +53,11 @@ function AnimatedRoutes() {
             <Route path="/signup" element={<Login />} />
             <Route path="/terms"  element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/policies" element={<Policies />} />
+            <Route path="/legal/:slug" element={<LegalDoc />} />
+            <Route path="/privacy-centre" element={<PrivacyCentre />} />
+            <Route path="/privacy-centre/overview" element={<PrivacyCentre />} />
+            <Route path="/privacy-centre/ads" element={<PrivacyCentre />} />
             <Route path="/admin"  element={<Admin />} />
 
             <Route path="/explore"       element={<Explore />} />
@@ -61,6 +69,12 @@ function AnimatedRoutes() {
             <Route path="/settings"      element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/settings/account"  element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/settings/password" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/privacy" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/notifications" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/blocked" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/content" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/data" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/cache" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/user/:fanId"   element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
             <Route path="/fan/:fanId"    element={<ProtectedRoute><FanProfile /></ProtectedRoute>} />
             <Route path="/create-post"   element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
