@@ -10,6 +10,24 @@ import { db } from '../firebase';
 
 const LS_KEY = 'sm_convos_v3';
 
+/** Fixed peer id for Starmeet Support chats (fan user_xyz ↔ support_starmeet) */
+export const SUPPORT_PEER_ID = 'support_starmeet';
+
+export function isSupportConvo(c) {
+  return c?.with?.type === 'support' || c?.theirId === SUPPORT_PEER_ID || c?.participants?.includes(SUPPORT_PEER_ID);
+}
+
+export function supportConvoMeta() {
+  return {
+    type: 'support',
+    id: 'starmeet',
+    name: 'Starmeet Support',
+    image: '/starmeet-oauth-logo.png',
+    sub: 'Help centre',
+    verified: true,
+  };
+}
+
 // Merge two convo snapshots (local cache vs Firestore)
 function mergeConvos(local, remote) {
   if (!local) return remote;
@@ -42,6 +60,14 @@ export function loadAll() {
 }
 export function saveAll(data) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
+}
+
+export function writeConvo(convo) {
+  const all = loadAll();
+  all[convo.id] = convo;
+  saveAll(all);
+  fsWrite(convo);
+  return convo;
 }
 
 // Deterministic convo ID from two participant IDs

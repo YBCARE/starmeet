@@ -76,7 +76,7 @@ function SettingsHub() {
         <section className="sm-settings-section">
           <h2 className="sm-settings-section-label">Support & about</h2>
           <div className="sm-settings-card">
-            <SettingsRow icon={HelpCircle} label="Help centre" to="/messages" />
+            <SettingsRow icon={HelpCircle} label="Help centre" to="/messages?with=support_starmeet" />
             <SettingsRow icon={Shield} label="Privacy centre" to="/privacy" />
             <SettingsRow icon={FileText} label="Terms and policies" to="/terms" />
           </div>

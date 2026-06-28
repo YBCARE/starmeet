@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   loadAll, saveAll, convoId, updateConvoStatus,
   getConvosForUser, subscribeToConvos, syncConvosFromFirestore, appendMessage, uid,
-  isAutoReplyEnabled,
+  isAutoReplyEnabled, SUPPORT_PEER_ID, supportConvoMeta, isSupportConvo, writeConvo,
 } from '../services/messageStore';
 import { celebPath } from '../utils/celebrity';
 import { redirectToStripe, isStripeConfigured } from '../config/stripe';
@@ -595,6 +595,11 @@ export default function Messages() {
     const all = loadAll();
     if (all[cid]) { setActiveId(cid); setShowMobile(true); return; }
 
+    if (withParam === SUPPORT_PEER_ID || withParam === 'support') {
+      openConvo(supportConvoMeta());
+      return;
+    }
+
     const [type, rawId] = withParam.includes('celeb_')
       ? ['celeb', withParam.replace('celeb_','')]
       : ['fan',   withParam.replace('fan_','')];
@@ -616,21 +621,50 @@ export default function Messages() {
 
   function openConvo(person) {
     if (!myId || !person) return;
-    const theirId = person.type === 'celeb' ? `celeb_${person.id}` : `fan_${person.id}`;
+    const theirId = person.type === 'support'
+      ? SUPPORT_PEER_ID
+      : person.type === 'celeb'
+        ? `celeb_${person.id}`
+        : `fan_${person.id}`;
     const cid     = convoId(myId, theirId);
     const all     = loadAll();
 
     if (!all[cid]) {
       const isFollowing = person.type === 'celeb' && celebFollows.includes(person.id);
-      all[cid] = {
+      const convo = {
         id: cid, myId, theirId,
         participants: [myId, theirId],
         with: { ...person },
-        status: isFollowing ? 'active' : 'active', // open for all — request system removed for better UX
-        messages: [],
+        status: 'active',
+        messages: person.type === 'support' ? [{
+          id: uid(),
+          from: 'system',
+          text: 'Hi! Describe your issue and the Starmeet team will reply here.',
+          timestamp: Date.now(),
+        }] : [],
         updatedAt: Date.now(),
       };
-      saveAll(all);
+      if (person.type === 'support' && user) {
+        convo.fanInfo = {
+          id: user.id,
+          name: user.name || user.username,
+          username: user.username,
+          email: user.email,
+        };
+      }
+      writeConvo(convo);
+    } else if (person.type === 'support' && user) {
+      const patch = {
+        fanInfo: {
+          id: user.id,
+          name: user.name || user.username,
+          username: user.username,
+          email: user.email,
+        },
+        updatedAt: Date.now(),
+      };
+      all[cid] = { ...all[cid], ...patch };
+      writeConvo(all[cid]);
     }
 
     // Mark as read when opening

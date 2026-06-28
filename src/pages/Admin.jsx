@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Star, Film, MessageCircle, Heart,
   Video, Settings, LogOut, Search, Plus, Trash2, Edit2, Check,
   ToggleLeft, ToggleRight, ChevronRight, X, Upload, Eye, EyeOff,
-  Save, RefreshCw, AlertTriangle, BarChart2, Shield, Send,
+  Save, RefreshCw, AlertTriangle, BarChart2, Shield, Send, HelpCircle,
 } from 'lucide-react';
 import { useCelebContext } from '../context/CelebContext';
 import { useAdmin } from '../context/AdminContext';
@@ -13,6 +13,7 @@ import { useFanPosts } from '../context/FanPostContext';
 import {
   loadAll, saveAll, appendMessage, updateConvoStatus, uid as msUid,
   setHumanTakeover, syncAllConvosFromFirestore, subscribeToAllConvos, isAutoReplyEnabled,
+  isSupportConvo,
 } from '../services/messageStore';
 import './Admin.css';
 
@@ -90,6 +91,7 @@ const NAV = [
   { key:'videos',      label:'Videos',      icon:Video },
   { key:'fans',        label:'Fans',        icon:Users },
   { key:'messages',    label:'Messages',    icon:MessageCircle },
+  { key:'support',     label:'Support',     icon:HelpCircle },
   { key:'settings',    label:'Settings',    icon:Settings },
 ];
 
@@ -1177,6 +1179,166 @@ function AdminMessages({ celebrities }) {
   );
 }
 
+// ─── Admin Support Inbox ──────────────────────────────────────────────────────
+function AdminSupport({ fans }) {
+  const [allConvos, setAllConvos] = useState(() => Object.values(loadAll()).filter(isSupportConvo));
+  const [activeConvo, setActive] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [syncing, setSyncing] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSyncing(true);
+    syncAllConvosFromFirestore().then(convos => {
+      if (!cancelled) {
+        setAllConvos(convos.filter(isSupportConvo).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)));
+        setSyncing(false);
+      }
+    });
+    const unsub = subscribeToAllConvos(convos => {
+      if (!cancelled) {
+        setAllConvos(convos.filter(isSupportConvo).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)));
+        setSyncing(false);
+      }
+    });
+    return () => { cancelled = true; unsub(); };
+  }, []);
+
+  useEffect(() => {
+    if (!activeConvo) return;
+    const fresh = allConvos.find(c => c.id === activeConvo.id);
+    if (fresh) setActive(fresh);
+  }, [allConvos, activeConvo?.id]);
+
+  function fanLabel(c) {
+    if (c.fanInfo?.name) return c.fanInfo.name;
+    if (c.fanInfo?.username) return `@${c.fanInfo.username}`;
+    const fanId = c.myId?.replace(/^user_/, '');
+    const fan = fans.find(f => f.id === fanId);
+    if (fan) return fan.name || fan.username || 'Fan';
+    return c.myId || 'Fan';
+  }
+
+  function fanEmail(c) {
+    return c.fanInfo?.email || fans.find(f => f.id === c.myId?.replace(/^user_/, ''))?.email || '';
+  }
+
+  function lastPreview(c) {
+    const msgs = c.messages || [];
+    const last = msgs[msgs.length - 1];
+    if (!last) return 'No messages yet';
+    if (last.from === 'system') return last.text;
+    return last.from === 'me' ? `Fan: ${last.text}` : `You: ${last.text}`;
+  }
+
+  function needsReply(c) {
+    const msgs = c.messages || [];
+    const last = msgs[msgs.length - 1];
+    return last && last.from === 'me';
+  }
+
+  function sendReply() {
+    if (!activeConvo || !replyText.trim()) return;
+    const msg = { id: msUid(), from: 'them', text: replyText.trim(), timestamp: Date.now() };
+    const updated = appendMessage(activeConvo.id, msg);
+    setReplyText('');
+    if (updated) setActive(updated);
+  }
+
+  const pending = allConvos.filter(needsReply).length;
+
+  return (
+    <div>
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 6 }}>Support Inbox</h1>
+      <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.5 }}>
+        Fans open Help centre in Settings → you reply here. They see your answer in Messages under Starmeet Support.
+      </p>
+      {syncing && <div style={{ fontSize: 12, color: '#555', marginBottom: 12 }}>Syncing…</div>}
+      {pending > 0 && (
+        <div style={{ ...s.card, marginBottom: 14, borderColor: 'rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24' }}>{pending} ticket{pending === 1 ? '' : 's'} waiting for a reply</div>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: activeConvo ? '280px 1fr' : '1fr', gap: 14, minHeight: 480 }}>
+        <div style={{ ...s.card, padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid #111', fontSize: 12, fontWeight: 700, color: '#888' }}>
+            Help requests ({allConvos.length})
+          </div>
+          <div style={{ maxHeight: 520, overflowY: 'auto' }}>
+            {allConvos.length === 0 ? (
+              <div style={{ padding: 24, textAlign: 'center', color: '#555', fontSize: 13 }}>
+                No support messages yet.
+              </div>
+            ) : allConvos.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setActive(c)}
+                style={{
+                  width: '100%', textAlign: 'left', background: activeConvo?.id === c.id ? '#111' : 'transparent',
+                  border: 'none', borderBottom: '1px solid #111', padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{fanLabel(c)}</span>
+                  {needsReply(c) && (
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#fbbf24', background: 'rgba(245,158,11,0.15)', borderRadius: 999, padding: '2px 8px' }}>
+                      NEW
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>{fanEmail(c) || 'No email'}</div>
+                <div style={{ fontSize: 12, color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lastPreview(c)}</div>
+                <div style={{ fontSize: 10, color: '#444', marginTop: 4 }}>{fmtTime(c.updatedAt)}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {activeConvo && (
+          <div style={{ ...s.card, padding: 0, display: 'flex', flexDirection: 'column', minHeight: 480 }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #111' }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{fanLabel(activeConvo)}</div>
+              <div style={{ fontSize: 12, color: '#555' }}>{fanEmail(activeConvo)}</div>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {(activeConvo.messages || []).map(msg => (
+                <div key={msg.id} style={{ display: 'flex', justifyContent: msg.from === 'me' ? 'flex-end' : msg.from === 'system' ? 'center' : 'flex-start' }}>
+                  {msg.from === 'system' ? (
+                    <div style={{ background: '#1a1a1a', border: '1px solid #222', borderRadius: 8, padding: '6px 12px', fontSize: 11, color: '#666' }}>{msg.text}</div>
+                  ) : (
+                    <div style={{ background: msg.from === 'me' ? '#1a3a5c' : '#14532d', borderRadius: 10, padding: '8px 12px', maxWidth: '78%' }}>
+                      <div style={{ fontSize: 10, color: '#888', marginBottom: 2 }}>{msg.from === 'me' ? 'Fan' : 'Starmeet Support'}</div>
+                      <div style={{ fontSize: 13, color: '#fff', lineHeight: 1.5 }}>{msg.text}</div>
+                      <div style={{ fontSize: 10, color: '#666', textAlign: 'right', marginTop: 2 }}>{fmtTime(msg.timestamp)}</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: '10px 14px', borderTop: '1px solid #111' }}>
+              <div style={{ fontSize: 11, color: '#10b981', fontWeight: 600, marginBottom: 6 }}>Reply as Starmeet Support</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  value={replyText}
+                  onChange={e => setReplyText(e.target.value)}
+                  placeholder="Type your reply…"
+                  onKeyDown={e => { if (e.key === 'Enter') sendReply(); }}
+                  style={{ ...s.input, marginBottom: 0, flex: 1 }}
+                />
+                <button type="button" onClick={sendReply} style={s.btn('#10b981')}>
+                  <Send size={13} /> Send
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // MAIN ADMIN
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1209,6 +1371,7 @@ export default function Admin() {
         {section==='videos'      && <VideoManager celebrities={celebrities} updateCeleb={updateCeleb} overrides={overrides} />}
         {section==='fans'        && <FanManager />}
         {section==='messages'    && <AdminMessages celebrities={allCelebs} />}
+        {section==='support'     && <AdminSupport fans={fansDb} />}
         {section==='settings'    && <SiteSettings settings={settings} updateSettings={updateSettings} />}
       </main>
     </div>
