@@ -148,6 +148,36 @@ body {
   .mobile-hide-icons { display: none !important; }
   .sm-nav-inner { padding: 0 12px; gap: 8px; }
   .sm-has-bottom-nav { padding-bottom: calc(var(--sm-bottom-nav-height) + env(safe-area-inset-bottom, 0px)); }
+
+  /* Public navbar — no overlap on small screens */
+  .sm-nav-public-inner {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    align-items: center;
+    gap: 6px;
+  }
+  .sm-nav-public-logo {
+    position: static;
+    transform: none;
+    grid-column: 2;
+    justify-self: center;
+    font-size: 17px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sm-nav-public-menu { grid-column: 1; z-index: 2; }
+  .sm-nav-public-actions {
+    grid-column: 3;
+    margin-left: 0;
+    gap: 0;
+  }
+  .sm-nav-public-login { display: none !important; }
+  .sm-nav-public-signup {
+    padding: 7px 12px !important;
+    font-size: 12px !important;
+    white-space: nowrap;
+  }
 }
 @media (min-width: 681px) {
   .mobile-menu-btn { display: none !important; }
@@ -273,6 +303,27 @@ body {
 }
 .sm-nav-link:hover { color: var(--sm-text); background: var(--sm-bg-hover); }
 .sm-nav-link.active { color: var(--sm-text); background: var(--sm-bg-surface); }
+
+/* Public nav (logged-out landing / login) */
+.sm-nav-public-inner {
+  position: relative;
+}
+.sm-nav-public-logo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  z-index: 0;
+  pointer-events: auto;
+}
+.sm-nav-public-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
 .sm-btn {
   display: inline-flex;
   align-items: center;

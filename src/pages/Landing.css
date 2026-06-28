@@ -104,6 +104,23 @@
   }
 }
 
+@media (max-width: 680px) {
+  .landing-hero {
+    padding-top: 32px;
+  }
+  .landing-hero-grid {
+    display: none;
+  }
+  .landing-hero-visual {
+    animation: none;
+  }
+  .landing-section {
+    padding: 48px 0;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 400px;
+  }
+}
+
 .landing-badge {
   display: inline-flex;
   align-items: center;

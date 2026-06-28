@@ -87,6 +87,12 @@ export function useCelebrities() {
         }
       } catch { /* corrupt cache — ignore */ }
 
+      // Let landing paint first on mobile before heavy Wikipedia fetch
+      const isMobile = typeof window !== 'undefined'
+        && window.matchMedia('(max-width: 680px)').matches;
+      if (isMobile) await delay(2000);
+      if (cancelled) return;
+
       // ── 2. Seed celebrities (immediate) ────────────────────────────────
       setPhase('seeds');
       const seedBatches = chunk(LIVE_SEEDS, BATCH_SIZE);

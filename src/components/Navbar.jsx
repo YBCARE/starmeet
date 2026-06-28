@@ -9,26 +9,26 @@ function PublicNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav className="sm-nav">
-      <div className="sm-nav-inner">
+    <nav className="sm-nav sm-nav-public">
+      <div className="sm-nav-inner sm-nav-public-inner">
         <button
           type="button"
           aria-label="Menu"
           onClick={() => setMenuOpen(!menuOpen)}
-          className="sm-icon-btn"
+          className="sm-icon-btn sm-nav-public-menu"
           style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
         >
           {menuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        <Link to="/" className="sm-logo" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+        <Link to="/" className="sm-logo sm-nav-public-logo">
           Starmeet
         </Link>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        <div className="sm-nav-public-actions">
           <Link to="/explore" className="sm-nav-link desktop-nav">Explore</Link>
-          <Link to="/login" className="sm-btn sm-btn-ghost" style={{ padding: '8px 16px' }}>Log in</Link>
-          <Link to="/signup" className="sm-btn sm-btn-primary" style={{ padding: '8px 16px' }}>Sign up</Link>
+          <Link to="/login" className="sm-btn sm-btn-ghost sm-nav-public-login">Log in</Link>
+          <Link to="/signup" className="sm-btn sm-btn-primary sm-nav-public-signup">Sign up</Link>
         </div>
       </div>
 
@@ -38,7 +38,7 @@ function PublicNavbar() {
           background: 'var(--sm-bg-elevated)', borderBottom: '1px solid var(--sm-border)',
           padding: '8px 16px 16px', zIndex: 99,
         }}>
-          {[['Explore', '/explore'], ['Sign up', '/signup'], ['Log in', '/login']].map(([label, to]) => (
+          {[['Explore', '/explore'], ['Log in', '/login'], ['Sign up', '/signup']].map(([label, to]) => (
             <Link key={to} to={to} onClick={() => setMenuOpen(false)} className="sm-nav-link" style={{ display: 'block', marginBottom: 4 }}>
               {label}
             </Link>
