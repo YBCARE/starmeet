@@ -9,6 +9,9 @@ import {
   updateProfile as fbUpdateProfile,
   sendEmailVerification,
   sendPasswordResetEmail,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
 } from 'firebase/auth';
 import {
   doc, setDoc, getDoc, updateDoc, collection,
@@ -51,6 +54,7 @@ function firebaseAuthError(e, action = 'sign in') {
   }
   if (e?.code === 'auth/popup-closed-by-user' || e?.code === 'auth/cancelled-popup-request') return 'Sign-in cancelled';
   if (e?.code === 'auth/too-many-requests') return 'Too many attempts. Wait a few minutes and try again.';
+  if (e?.code === 'auth/requires-recent-login') return 'For security, log out and sign in again, then retry.';
   return e?.message || `Could not ${action}`;
 }
 
@@ -330,6 +334,42 @@ export function AuthProvider({ children }) {
     }
   }
 
+  function hasPasswordLogin() {
+    const fbUser = auth?.currentUser;
+    if (!fbUser) return false;
+    return fbUser.providerData.some(p => p.providerId === 'password');
+  }
+
+  function usesGoogleLogin() {
+    const fbUser = auth?.currentUser;
+    if (!fbUser) return false;
+    return fbUser.providerData.some(p => p.providerId === 'google.com');
+  }
+
+  async function changePassword(currentPassword, newPassword) {
+    const authErr = authReady();
+    if (authErr) return { error: authErr };
+
+    const fbUser = auth.currentUser;
+    if (!fbUser) return { error: 'Not signed in' };
+    if (!hasPasswordLogin()) {
+      return { error: 'Your account uses Google sign-in. Use Google to log in, or request an email reset link to set a password.' };
+    }
+    if (!newPassword || newPassword.length < 6) {
+      return { error: 'New password must be at least 6 characters' };
+    }
+
+    try {
+      const credential = EmailAuthProvider.credential(fbUser.email, currentPassword);
+      await reauthenticateWithCredential(fbUser, credential);
+      await updatePassword(fbUser, newPassword);
+      return { success: true };
+    } catch (e) {
+      console.error('[Starmeet] Change password error:', e.code, e.message);
+      return { error: firebaseAuthError(e, 'change password') };
+    }
+  }
+
   async function loginWithGoogle() {
     const authErr = authReady();
     if (authErr) return { error: authErr };
@@ -543,7 +583,8 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, isLoggedIn, authLoading, fansDb,
-      signup, login, loginWithGoogle, logout, resetPassword, updateProfile,
+      signup, login, loginWithGoogle, logout, resetPassword, changePassword,
+      hasPasswordLogin, usesGoogleLogin, updateProfile,
       // celeb follows (backwards compat)
       follows, celebFollows, toggleFollow, isFollowing, toggleCelebFollow, isCelebFollowing,
       // fan follows

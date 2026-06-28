@@ -1,7 +1,7 @@
 // Full Instagram-style fan profile for the logged-in user OR any fan by ID
 import { useState, useRef, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Camera, Edit2, Grid3x3, Heart, MessageCircle, LogOut, Check, ChevronLeft, Plus, Star } from 'lucide-react';
+import { Camera, Edit2, Grid3x3, Heart, MessageCircle, LogOut, Check, ChevronLeft, Plus, Star, Settings as SettingsIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { isStripeConfigured } from '../config/stripe';
 import { useFanPosts } from '../context/FanPostContext';
@@ -156,6 +156,9 @@ export default function UserProfile() {
             <div style={{ display:'flex', gap:8 }}>
               {isOwnProfile ? (
                 <>
+                  <Link to="/settings" style={{ padding:'8px 14px', background:'#1a1a1a', border:'1px solid #333', borderRadius:8, color:'#888', fontSize:13, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:5, textDecoration:'none' }}>
+                    <SettingsIcon size={13} /> Settings
+                  </Link>
                   <button onClick={() => setEditing(true)} style={{ padding:'8px 16px', background:'#1a1a1a', border:'1px solid #333', borderRadius:8, color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:5 }}>
                     <Edit2 size={13} /> Edit profile
                   </button>

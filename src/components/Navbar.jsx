@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, MessageCircle, User, Menu, X, LogOut, Home, Compass, Plus } from 'lucide-react';
+import { Search, MessageCircle, User, Menu, X, LogOut, Home, Compass, Plus, Settings as SettingsIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { loadAll } from '../services/messageStore';
 import NotificationBell from './NotificationBell';
@@ -145,6 +145,7 @@ function AuthNavbar() {
                 <div style={{ fontSize: 12, color: 'var(--sm-text-muted)', marginTop: 2 }}>{user?.email || ''}</div>
               </div>
               <Link to="/profile" onClick={() => setProfileOpen(false)} style={dropdownItemStyle}><User size={14} /> My Profile</Link>
+              <Link to="/settings" onClick={() => setProfileOpen(false)} style={dropdownItemStyle}><SettingsIcon size={14} /> Settings</Link>
               <Link to="/create-post" onClick={() => setProfileOpen(false)} style={dropdownItemStyle}><Plus size={14} /> Create Post</Link>
               <button type="button" onClick={handleLogout} style={{ ...dropdownItemStyle, border: 'none', cursor: 'pointer', width: '100%', color: 'var(--sm-danger)' }}>
                 <LogOut size={14} /> Log out

@@ -23,6 +23,7 @@ import UpgradeSuccess from './pages/UpgradeSuccess';
 import NotFound from './pages/NotFound';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import Settings from './pages/Settings';
 import MobileBottomNav from './components/MobileBottomNav';
 
 const pv = {
@@ -57,6 +58,9 @@ function AnimatedRoutes() {
             <Route path="/feed"          element={<ProtectedRoute><Feed /></ProtectedRoute>} />
             <Route path="/messages"      element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/profile"       element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+            <Route path="/settings"      element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/account"  element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/password" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/user/:fanId"   element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
             <Route path="/fan/:fanId"    element={<ProtectedRoute><FanProfile /></ProtectedRoute>} />
             <Route path="/create-post"   element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
