@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Login() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { login, signup, loginWithGoogle } = useAuth();
+  const { login, signup, loginWithGoogle, resetPassword } = useAuth();
 
   const initMode  = location.pathname === '/signup' ? 'signup' : 'login';
   const [mode, setMode]         = useState(initMode);
@@ -39,10 +39,12 @@ export default function Login() {
   }
 
   const [submitting, setSubmitting] = useState(false);
+  const [resetSent, setResetSent]   = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+    setResetSent(false);
     setSubmitting(true);
     const from = location.state?.from || '/feed';
 
@@ -81,7 +83,28 @@ export default function Login() {
     }
   }
 
+  async function handleForgotPassword() {
+    setError('');
+    setResetSent(false);
+    if (!form.email.trim()) {
+      setError('Enter your email above, then tap Forgot password.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await resetPassword(form.email);
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+      setResetSent(true);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   function switchMode(next) {
+    setResetSent(false);
     setMode(next);
     setError('');
     navigate(next === 'signup' ? '/signup' : '/login', { replace: true });
@@ -150,6 +173,13 @@ export default function Login() {
           {verifyNotice && (
             <div className="sm-auth-alert sm-auth-alert-success">
               Account created! We sent a verification email to <strong>{form.email}</strong>. Check your inbox and click the link to verify.
+            </div>
+          )}
+
+          {resetSent && mode === 'login' && (
+            <div className="sm-auth-alert sm-auth-alert-success">
+              If an account exists for <strong>{form.email.trim()}</strong>, we sent a password reset link.
+              Check your inbox and spam folder.
             </div>
           )}
 
@@ -250,7 +280,9 @@ export default function Login() {
 
             {mode === 'login' && (
               <div className="sm-auth-forgot">
-                <button type="button">Forgot password?</button>
+                <button type="button" onClick={handleForgotPassword} disabled={submitting}>
+                  Forgot password?
+                </button>
               </div>
             )}
 

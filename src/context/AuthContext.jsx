@@ -8,6 +8,7 @@ import {
   onAuthStateChanged,
   updateProfile as fbUpdateProfile,
   sendEmailVerification,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import {
   doc, setDoc, getDoc, updateDoc, collection,
@@ -42,12 +43,26 @@ function firebaseAuthError(e, action = 'sign in') {
   }
   if (e?.code === 'auth/email-already-in-use') return 'Email already registered';
   if (e?.code === 'auth/weak-password') return 'Password too weak (min 6 chars)';
-  if (e?.code === 'auth/user-not-found' || e?.code === 'auth/invalid-credential' || e?.code === 'auth/invalid-email') {
+  if (e?.code === 'auth/user-not-found' || e?.code === 'auth/invalid-email') {
     return 'No account found with this email';
   }
-  if (e?.code === 'auth/wrong-password') return 'Incorrect password';
+  if (e?.code === 'auth/invalid-credential' || e?.code === 'auth/wrong-password') {
+    return 'Incorrect email or password';
+  }
   if (e?.code === 'auth/popup-closed-by-user' || e?.code === 'auth/cancelled-popup-request') return 'Sign-in cancelled';
+  if (e?.code === 'auth/too-many-requests') return 'Too many attempts. Wait a few minutes and try again.';
   return e?.message || `Could not ${action}`;
+}
+
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function authReady() {
+  if (!auth) {
+    return 'Sign-in is unavailable. Refresh the page and try again.';
+  }
+  return null;
 }
 
 // Upload base64 avatar to Firebase Storage; returns download URL
@@ -153,7 +168,10 @@ export function AuthProvider({ children }) {
   }
 
   async function signup({ username, email, password, name, bio, dob, avatar }) {
-    // ── Step 1: local duplicate check (no network needed) ─────────────────
+    const authErr = authReady();
+    if (authErr) return { error: authErr };
+
+    email = normalizeEmail(email);
     const cleanUsername = username.toLowerCase().replace(/\s+/g, '_');
     const existing = fansDb.find(f => f.email === email || f.username === cleanUsername);
     if (existing) return { error: existing.email === email ? 'Email already registered' : 'Username taken' };
@@ -236,6 +254,11 @@ export function AuthProvider({ children }) {
   }
 
   async function login({ email, password }) {
+    const authErr = authReady();
+    if (authErr) return { error: authErr };
+
+    email = normalizeEmail(email);
+
     // ── Step 1: Firebase Auth sign-in ─────────────────────────────────────
     console.log('[Starmeet] Login: calling signInWithEmailAndPassword...', { email });
     let fbUser;
@@ -285,7 +308,32 @@ export function AuthProvider({ children }) {
     return { success: true };
   }
 
+  async function resetPassword(email) {
+    const authErr = authReady();
+    if (authErr) return { error: authErr };
+
+    const normalized = normalizeEmail(email);
+    if (!normalized) return { error: 'Enter your email address' };
+
+    try {
+      await sendPasswordResetEmail(auth, normalized, {
+        url: typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined,
+      });
+      return { success: true };
+    } catch (e) {
+      console.error('[Starmeet] Password reset error:', e.code, e.message);
+      if (e?.code === 'auth/user-not-found') {
+        // Don't reveal whether the email exists
+        return { success: true };
+      }
+      return { error: firebaseAuthError(e, 'send reset email') };
+    }
+  }
+
   async function loginWithGoogle() {
+    const authErr = authReady();
+    if (authErr) return { error: authErr };
+
     try {
       const provider = new GoogleAuthProvider();
       const cred   = await signInWithPopup(auth, provider);
@@ -495,7 +543,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, isLoggedIn, authLoading, fansDb,
-      signup, login, loginWithGoogle, logout, updateProfile,
+      signup, login, loginWithGoogle, logout, resetPassword, updateProfile,
       // celeb follows (backwards compat)
       follows, celebFollows, toggleFollow, isFollowing, toggleCelebFollow, isCelebFollowing,
       // fan follows
