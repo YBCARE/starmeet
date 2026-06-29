@@ -1,31 +1,45 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import {
-  doc, setDoc, getDoc, updateDoc, deleteDoc,
-  collection, getDocs, onSnapshot, query, orderBy,
+  doc, setDoc, getDoc, getDocs,
+  collection, query, orderBy,
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useAuth } from './AuthContext';
+import {
+  checkIsAdmin, loadBannedUserIds, banUserInFirestore, unbanUserInFirestore,
+} from '../services/adminAuth';
 
 const AdminContext = createContext(null);
-const ADMIN_CREDS = { username: 'admin', password: 'starmeet2025' };
 
 function load(k, fb) { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch { return fb; } }
 function save(k, v)  { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 function uid()       { return 'adm_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
-// Write to Firestore, silently fail
 async function fsSet(path, id, data) {
-  try { await setDoc(doc(db, path, id), data, { merge: true }); } catch {}
+  if (!db) throw new Error('Database unavailable');
+  await setDoc(doc(db, path, id), data, { merge: true });
 }
+
 async function fsGet(path, id) {
-  try { const s = await getDoc(doc(db, path, id)); return s.exists() ? s.data() : null; } catch { return null; }
+  try {
+    const s = await getDoc(doc(db, path, id));
+    return s.exists() ? s.data() : null;
+  } catch {
+    return null;
+  }
 }
 
 export function AdminProvider({ children }) {
-  const [loggedIn,    setLoggedIn]    = useState(() => load('sm_admin_session', false));
+  const { user, authLoading, logout } = useAuth();
+  const [adminVerified, setAdminVerified] = useState(false);
+  const [adminChecking, setAdminChecking] = useState(true);
+  const [adminError, setAdminError]       = useState('');
+
   const [overrides,   setOverrides]   = useState(() => load('sm_admin_overrides', {}));
   const [addedCelebs, setAddedCelebs] = useState(() => load('sm_admin_new_celebs', []));
   const [adminPosts,  setAdminPosts]  = useState(() => load('sm_admin_posts', []));
   const [postOvr,     setPostOvr]     = useState(() => load('sm_admin_post_ovr', {}));
+  const [bannedUsers, setBannedUsers] = useState([]);
   const [settings,    setSettings]    = useState(() => load('sm_admin_settings', {
     siteName:        'Starmeet',
     heroHeadline:    'Connect with the stars you love',
@@ -34,19 +48,43 @@ export function AdminProvider({ children }) {
     maxLikes:        2000000,
   }));
 
-  // Sync admin data from Firestore on login
+  const loggedIn = !!user && adminVerified;
+
+  useEffect(() => {
+    if (authLoading) return;
+    let cancelled = false;
+
+    (async () => {
+      setAdminChecking(true);
+      setAdminError('');
+      if (!user) {
+        if (!cancelled) {
+          setAdminVerified(false);
+          setAdminChecking(false);
+        }
+        return;
+      }
+      const ok = await checkIsAdmin(user.id);
+      if (!cancelled) {
+        setAdminVerified(ok);
+        setAdminChecking(false);
+        if (!ok) setAdminError('This account is not authorized for admin access.');
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [user, authLoading]);
+
   useEffect(() => {
     if (!loggedIn) return;
     (async () => {
       try {
-        // Settings
         const settingsSnap = await fsGet('admin', 'settings');
         if (settingsSnap) {
           setSettings(settingsSnap);
           save('sm_admin_settings', settingsSnap);
         }
 
-        // Celebrity overrides
         const ovSnap = await getDocs(collection(db, 'admin_celeb_overrides'));
         if (!ovSnap.empty) {
           const ovData = {};
@@ -55,7 +93,6 @@ export function AdminProvider({ children }) {
           save('sm_admin_overrides', ovData);
         }
 
-        // Added celebrities
         const acSnap = await getDocs(query(collection(db, 'admin_added_celebs'), orderBy('createdAt', 'desc')));
         if (!acSnap.empty) {
           const celebs = acSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -63,37 +100,34 @@ export function AdminProvider({ children }) {
           save('sm_admin_new_celebs', celebs);
         }
 
-        // Admin posts
         const apSnap = await getDocs(query(collection(db, 'admin_posts'), orderBy('createdAt', 'desc')));
         if (!apSnap.empty) {
           const posts = apSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           setAdminPosts(posts);
           save('sm_admin_posts', posts);
         }
-      } catch {}
+
+        const banned = await loadBannedUserIds();
+        setBannedUsers(banned);
+      } catch (e) {
+        console.error('[Starmeet] Admin sync failed:', e);
+      }
     })();
   }, [loggedIn]);
 
-  /* ── auth ── */
-  function adminLogin(username, password) {
-    if (username === ADMIN_CREDS.username && password === ADMIN_CREDS.password) {
-      setLoggedIn(true);
-      save('sm_admin_session', true);
-      return { success: true };
-    }
-    return { error: 'Invalid credentials' };
-  }
   function adminLogout() {
-    setLoggedIn(false);
-    localStorage.removeItem('sm_admin_session');
+    setAdminVerified(false);
+    setAdminError('');
+    logout();
   }
 
-  /* ── celebrity overrides ── */
   const updateCeleb = useCallback((id, patch) => {
     setOverrides(prev => {
       const next = { ...prev, [id]: { ...(prev[id] || {}), ...patch } };
       save('sm_admin_overrides', next);
-      fsSet('admin_celeb_overrides', String(id), next[id]);
+      fsSet('admin_celeb_overrides', String(id), next[id]).catch(e =>
+        console.error('[Starmeet] Admin write failed:', e.message)
+      );
       return next;
     });
   }, []);
@@ -102,7 +136,9 @@ export function AdminProvider({ children }) {
     setOverrides(prev => {
       const next = { ...prev, [id]: { ...(prev[id] || {}), _deleted: true } };
       save('sm_admin_overrides', next);
-      fsSet('admin_celeb_overrides', String(id), next[id]);
+      fsSet('admin_celeb_overrides', String(id), next[id]).catch(e =>
+        console.error('[Starmeet] Admin write failed:', e.message)
+      );
       return next;
     });
   }, []);
@@ -112,7 +148,9 @@ export function AdminProvider({ children }) {
     setAddedCelebs(prev => {
       const next = [celeb, ...prev];
       save('sm_admin_new_celebs', next);
-      fsSet('admin_added_celebs', celeb.id, celeb);
+      fsSet('admin_added_celebs', celeb.id, celeb).catch(e =>
+        console.error('[Starmeet] Admin write failed:', e.message)
+      );
       return next;
     });
     return celeb;
@@ -120,13 +158,14 @@ export function AdminProvider({ children }) {
 
   const getCelebOverride = useCallback((id) => overrides[id] || {}, [overrides]);
 
-  /* ── admin posts ── */
   const addAdminPost = useCallback((data) => {
     const post = { id: uid(), ...data, createdAt: Date.now(), _adminPost: true };
     setAdminPosts(prev => {
       const next = [post, ...prev];
       save('sm_admin_posts', next);
-      fsSet('admin_posts', post.id, post);
+      fsSet('admin_posts', post.id, post).catch(e =>
+        console.error('[Starmeet] Admin write failed:', e.message)
+      );
       return next;
     });
     return post;
@@ -136,7 +175,9 @@ export function AdminProvider({ children }) {
     setPostOvr(prev => {
       const next = { ...prev, [id]: { ...(prev[id] || {}), ...patch } };
       save('sm_admin_post_ovr', next);
-      fsSet('admin_post_overrides', String(id), next[id]);
+      fsSet('admin_post_overrides', String(id), next[id]).catch(e =>
+        console.error('[Starmeet] Admin write failed:', e.message)
+      );
       return next;
     });
   }, []);
@@ -145,7 +186,9 @@ export function AdminProvider({ children }) {
     setPostOvr(prev => {
       const next = { ...prev, [id]: { ...(prev[id] || {}), _deleted: true } };
       save('sm_admin_post_ovr', next);
-      fsSet('admin_post_overrides', String(id), next[id]);
+      fsSet('admin_post_overrides', String(id), next[id]).catch(e =>
+        console.error('[Starmeet] Admin write failed:', e.message)
+      );
       return next;
     });
     setAdminPosts(prev => {
@@ -155,22 +198,40 @@ export function AdminProvider({ children }) {
     });
   }, []);
 
-  /* ── settings ── */
   const updateSettings = useCallback((patch) => {
     setSettings(prev => {
       const next = { ...prev, ...patch };
       save('sm_admin_settings', next);
-      fsSet('admin', 'settings', next);
+      fsSet('admin', 'settings', next).catch(e =>
+        console.error('[Starmeet] Admin write failed:', e.message)
+      );
       return next;
     });
   }, []);
 
+  const banFan = useCallback(async (fanId, meta = {}) => {
+    const res = await banUserInFirestore(fanId, meta);
+    if (res?.error) return res;
+    setBannedUsers(prev => (prev.includes(fanId) ? prev : [...prev, fanId]));
+    return { success: true };
+  }, []);
+
+  const unbanFan = useCallback(async (fanId) => {
+    const res = await unbanUserInFirestore(fanId);
+    if (res?.error) return res;
+    setBannedUsers(prev => prev.filter(id => id !== fanId));
+    return { success: true };
+  }, []);
+
+  const isFanBanned = useCallback((fanId) => bannedUsers.includes(fanId), [bannedUsers]);
+
   return (
     <AdminContext.Provider value={{
-      loggedIn, adminLogin, adminLogout,
+      loggedIn, adminChecking, adminError, adminLogout,
       overrides, addedCelebs, updateCeleb, deleteCeleb, addCeleb, getCelebOverride,
       adminPosts, addAdminPost, updatePost, deletePost, postOvr,
       settings, updateSettings,
+      bannedUsers, banFan, unbanFan, isFanBanned,
     }}>
       {children}
     </AdminContext.Provider>

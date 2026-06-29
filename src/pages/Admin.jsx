@@ -37,16 +37,49 @@ const s = { // shared inline styles
 
 // ─── Admin Login ──────────────────────────────────────────────────────────────
 function AdminLogin() {
-  const { adminLogin } = useAdmin();
-  const [u, setU] = useState('');
-  const [p, setP] = useState('');
+  const { adminChecking, adminError } = useAdmin();
+  const { user, authLoading, login, loginWithGoogle } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showP, setShowP] = useState(false);
   const [err, setErr] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  function submit(e) {
+  useEffect(() => {
+    if (adminError) setErr(adminError);
+  }, [adminError]);
+
+  async function submit(e) {
     e.preventDefault();
-    const res = adminLogin(u, p);
-    if (res.error) setErr(res.error);
+    setErr('');
+    setSubmitting(true);
+    try {
+      const res = await login({ email, password });
+      if (res?.error) setErr(res.error);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function googleSignIn() {
+    setErr('');
+    setSubmitting(true);
+    try {
+      const res = await loginWithGoogle();
+      if (res?.error) setErr(res.error);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (authLoading || (user && adminChecking)) {
+    return (
+      <div className="sm-admin-login">
+        <div className="sm-admin-login-card" style={{ textAlign: 'center', color: '#888' }}>
+          Verifying admin access…
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -58,24 +91,36 @@ function AdminLogin() {
           </div>
           <div>
             <div style={{ fontSize:18, fontWeight:800, color:'#fff' }}>Admin Panel</div>
-            <div style={{ fontSize:12, color:'#555' }}>Starmeet Control Center</div>
+            <div style={{ fontSize:12, color:'#555' }}>Sign in with your authorized Starmeet account</div>
           </div>
         </div>
 
         {err && <div style={{ background:'rgba(224,82,82,0.1)', border:'1px solid rgba(224,82,82,0.3)', borderRadius:8, padding:'9px 12px', marginBottom:14, fontSize:13, color:'#e05252' }}>{err}</div>}
 
+        <button type="button" onClick={googleSignIn} disabled={submitting} style={{ ...s.btn(), width:'100%', justifyContent:'center', padding:12, marginBottom:14 }}>
+          Continue with Google
+        </button>
+
+        <div style={{ textAlign:'center', color:'#555', fontSize:12, margin:'0 0 14px' }}>or email</div>
+
         <form onSubmit={submit}>
-          <label style={s.label}>Username</label>
-          <input value={u} onChange={e=>setU(e.target.value)} required style={{ ...s.input, marginBottom:12 }} />
+          <label style={s.label}>Email</label>
+          <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required style={{ ...s.input, marginBottom:12 }} />
           <label style={s.label}>Password</label>
           <div style={{ position:'relative', marginBottom:16 }}>
-            <input type={showP?'text':'password'} value={p} onChange={e=>setP(e.target.value)} required style={{ ...s.input, paddingRight:40 }} />
+            <input type={showP?'text':'password'} value={password} onChange={e=>setPassword(e.target.value)} required style={{ ...s.input, paddingRight:40 }} />
             <button type="button" onClick={()=>setShowP(x=>!x)} style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#555', lineHeight:0 }}>
               {showP ? <EyeOff size={15}/> : <Eye size={15}/>}
             </button>
           </div>
-          <button type="submit" style={{ ...s.btn(), width:'100%', justifyContent:'center', padding:12 }}>Sign In as Admin</button>
+          <button type="submit" disabled={submitting} style={{ ...s.btn(), width:'100%', justifyContent:'center', padding:12 }}>
+            {submitting ? 'Signing in…' : 'Sign in'}
+          </button>
         </form>
+
+        <p style={{ fontSize:11, color:'#555', lineHeight:1.5, marginTop:16, marginBottom:0 }}>
+          Only Firebase accounts listed in the <code style={{ color:'#888' }}>admins</code> collection can access this panel.
+        </p>
       </div>
     </div>
   );
@@ -756,13 +801,21 @@ function VideoManager({ celebrities, updateCeleb, overrides }) {
 // ─── Fan Manager ──────────────────────────────────────────────────────────────
 function FanManager() {
   const { fansDb } = useAuth();
+  const { banFan, unbanFan, isFanBanned } = useAdmin();
   const [search, setSearch] = useState('');
-  const [banned, setBanned] = useState(() => { try { return JSON.parse(localStorage.getItem('sm_banned_fans')||'[]'); } catch { return []; }});
+  const [actionErr, setActionErr] = useState('');
 
-  function banFan(id) {
-    const next = [...banned, id];
-    setBanned(next);
-    localStorage.setItem('sm_banned_fans', JSON.stringify(next));
+  async function handleBan(id, username) {
+    if (!confirm(`Ban ${username}? They will be signed out and blocked from the app.`)) return;
+    setActionErr('');
+    const res = await banFan(id, { username });
+    if (res?.error) setActionErr(res.error);
+  }
+
+  async function handleUnban(id) {
+    setActionErr('');
+    const res = await unbanFan(id);
+    if (res?.error) setActionErr(res.error);
   }
 
   const filtered = useMemo(() => {
@@ -776,6 +829,12 @@ function FanManager() {
       <h1 style={{ fontSize:22, fontWeight:800, color:'#fff', marginBottom:20 }}>
         Fans / Users <span style={{ fontSize:14, color:'#555', fontWeight:400 }}>({fansDb.length} registered)</span>
       </h1>
+
+      {actionErr && (
+        <div style={{ background:'rgba(224,82,82,0.1)', border:'1px solid rgba(224,82,82,0.3)', borderRadius:8, padding:'9px 12px', marginBottom:14, fontSize:13, color:'#e05252' }}>
+          {actionErr}
+        </div>
+      )}
 
       <div style={{ display:'flex', alignItems:'center', gap:8, background:'#0d0d0d', border:'1px solid #1a1a1a', borderRadius:10, padding:'8px 12px', marginBottom:16, maxWidth:360 }}>
         <Search size={15} color="#555" />
@@ -800,7 +859,7 @@ function FanManager() {
             </thead>
             <tbody>
               {filtered.map(fan => {
-                const isBanned = banned.includes(fan.id);
+                const isBanned = isFanBanned(fan.id);
                 const av = `https://ui-avatars.com/api/?name=${encodeURIComponent(fan.name||fan.username)}&background=111&color=aaa&size=80`;
                 return (
                   <tr key={fan.id} style={{ borderBottom:'1px solid #0d0d0d' }}>
@@ -815,8 +874,12 @@ function FanManager() {
                       </span>
                     </td>
                     <td style={{ padding:'9px 14px' }}>
-                      {!isBanned && (
-                        <button onClick={()=>{ if(confirm(`Ban ${fan.username}?`)) banFan(fan.id); }} style={{ ...s.btnGhost, padding:'4px 10px', fontSize:11, color:'#e05252', borderColor:'rgba(224,82,82,0.2)' }}>
+                      {isBanned ? (
+                        <button onClick={() => handleUnban(fan.id)} style={{ ...s.btnGhost, padding:'4px 10px', fontSize:11 }}>
+                          Unban
+                        </button>
+                      ) : (
+                        <button onClick={() => handleBan(fan.id, fan.username)} style={{ ...s.btnGhost, padding:'4px 10px', fontSize:11, color:'#e05252', borderColor:'rgba(224,82,82,0.2)' }}>
                           <AlertTriangle size={11}/> Ban
                         </button>
                       )}

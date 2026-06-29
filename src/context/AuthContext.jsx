@@ -19,6 +19,9 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '../firebase';
+import { checkIsBanned } from '../services/adminAuth';
+
+const BAN_MESSAGE = 'Your account has been suspended. Contact support@starmeet.online.';
 
 const AuthContext = createContext(null);
 
@@ -97,12 +100,25 @@ export function AuthProvider({ children }) {
   const isLoggedIn = !!user;
   const isPro      = !!proStatus;
 
+  async function rejectIfBanned(fbUid) {
+    const banned = await checkIsBanned(fbUid);
+    if (!banned) return false;
+    await signOut(auth).catch(() => {});
+    setUser(null);
+    localStorage.removeItem('sm_user');
+    return true;
+  }
+
   // ── Firebase Auth state listener ──────────────────────────────────────────
   // NOTE: _applyProfile is defined BELOW this effect; we use a ref to avoid
   // stale closure issues at the cost of one extra render on the cold path.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
+        if (await rejectIfBanned(fbUser.uid)) {
+          setAuthLoading(false);
+          return;
+        }
         try {
           const snap = await getDoc(doc(db, 'users', fbUser.uid));
           if (snap.exists()) {
@@ -275,6 +291,10 @@ export function AuthProvider({ children }) {
       return { error: firebaseAuthError(e, 'sign in') };
     }
 
+    if (await rejectIfBanned(fbUser.uid)) {
+      return { error: BAN_MESSAGE };
+    }
+
     // ── Step 2: Load Firestore profile (non-blocking) ─────────────────────
     try {
       const snap = await getDoc(doc(db, 'users', fbUser.uid));
@@ -378,6 +398,10 @@ export function AuthProvider({ children }) {
       const provider = new GoogleAuthProvider();
       const cred   = await signInWithPopup(auth, provider);
       const fbUser = cred.user;
+
+      if (await rejectIfBanned(fbUser.uid)) {
+        return { error: BAN_MESSAGE };
+      }
 
       // Check if Firestore profile exists; create if first login
       const snap = await getDoc(doc(db, 'users', fbUser.uid));

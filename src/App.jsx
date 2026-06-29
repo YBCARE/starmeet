@@ -104,15 +104,15 @@ function AppShell() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AdminProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <AdminProvider>
           <FanPostProvider>
             <CelebProvider>
               <AppShell />
             </CelebProvider>
           </FanPostProvider>
-        </AuthProvider>
-      </AdminProvider>
+        </AdminProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

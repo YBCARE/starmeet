@@ -2,48 +2,100 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users — public read (needed for fan search / profile pages)
-    // Only the account owner can write their own doc
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isBanned(uid) {
+      return exists(/databases/$(database)/documents/banned_users/$(uid));
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function userParticipant() {
+      return 'user_' + request.auth.uid;
+    }
+
+    function isConversationParticipant(data) {
+      return signedIn()
+        && data.participants != null
+        && userParticipant() in data.participants;
+    }
+
+    // Admin roster — only readable by the signed-in user checking their own doc.
+    // Create the first admin in Firebase Console: collection "admins", doc ID = your Firebase UID.
+    match /admins/{adminId} {
+      allow read: if signedIn() && request.auth.uid == adminId;
+      allow write: if false;
+    }
+
+    // Banned users — admins manage; users can read only their own ban status.
+    match /banned_users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // User profiles — authenticated read; owner write unless banned.
     match /users/{userId} {
-      allow read:  if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if signedIn();
+      allow create: if isOwner(userId) && !isBanned(userId);
+      allow update: if isOwner(userId) && !isBanned(userId);
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
-    // Fan posts
     match /posts/{postId} {
-      allow read:  if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if true;
+      allow create: if signedIn() && !isBanned(request.auth.uid);
+      allow update, delete: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && !isBanned(request.auth.uid);
     }
 
-    // Comments
     match /comments/{commentId} {
-      allow read:  if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if true;
+      allow create: if signedIn() && !isBanned(request.auth.uid);
+      allow update, delete: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && !isBanned(request.auth.uid);
     }
 
-    // Conversations — any authenticated user can create/read/write
-    // (participants check happens at app level)
     match /conversations/{convoId} {
-      allow read, write: if request.auth != null;
+      allow read: if isAdmin()
+        || isConversationParticipant(resource.data);
+      allow create: if signedIn()
+        && isConversationParticipant(request.resource.data);
+      allow update: if isAdmin()
+        || isConversationParticipant(resource.data);
+      allow delete: if isAdmin();
     }
 
-    // Admin collections — open for demo (lock down in production with a service account)
+    // Public catalog/content — anyone can read; only admins can write.
     match /admin/{docId} {
-      allow read, write: if true;
+      allow read: if docId == 'settings' || signedIn();
+      allow write: if isAdmin();
     }
     match /admin_celeb_overrides/{id} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
     match /admin_added_celebs/{id} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
     match /admin_posts/{id} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
     match /admin_post_overrides/{id} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }
