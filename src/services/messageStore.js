@@ -63,11 +63,14 @@ export function saveAll(data) {
 }
 
 export function writeConvo(convo) {
+  const payload = convo.isSupport || convo.theirId === SUPPORT_PEER_ID
+    ? { ...convo, isSupport: true }
+    : convo;
   const all = loadAll();
-  all[convo.id] = convo;
+  all[payload.id] = payload;
   saveAll(all);
-  fsWrite(convo);
-  return convo;
+  fsWrite(payload);
+  return payload;
 }
 
 // Deterministic convo ID from two participant IDs
@@ -82,10 +85,18 @@ export function uid() {
 // ─── Sync helpers ─────────────────────────────────────────────────────────────
 
 // Write a full convo object to Firestore
-async function fsWrite(convo) {
+export async function fsWrite(convo) {
+  if (!db) {
+    console.error('[Starmeet] Firestore not available — message saved locally only');
+    return { ok: false, error: 'Database unavailable' };
+  }
   try {
     await setDoc(doc(db, 'conversations', convo.id), convo, { merge: true });
-  } catch {}
+    return { ok: true };
+  } catch (e) {
+    console.error('[Starmeet] Firestore write failed:', e?.code, e?.message, convo?.id);
+    return { ok: false, error: e?.message || 'Write failed' };
+  }
 }
 
 // Update a field on a Firestore convo doc
@@ -152,8 +163,60 @@ export async function syncAllConvosFromFirestore() {
     });
     saveAll(all);
     return Object.values(all);
-  } catch {
+  } catch (e) {
+    console.error('[Starmeet] syncAllConvos failed:', e?.code, e?.message);
     return Object.values(loadAll());
+  }
+}
+
+/** Admin: pull support tickets only (works with Firestore security rules) */
+export async function syncSupportConvosFromFirestore() {
+  if (!db) return Object.values(loadAll()).filter(isSupportConvo);
+  try {
+    const q = query(
+      collection(db, 'conversations'),
+      where('participants', 'array-contains', SUPPORT_PEER_ID)
+    );
+    const snap = await getDocs(q);
+    const all = loadAll();
+    snap.docs.forEach(d => {
+      const c = { ...d.data(), id: d.id };
+      const existing = all[c.id];
+      all[c.id] = existing ? mergeConvos(existing, c) : c;
+    });
+    saveAll(all);
+    return Object.values(all).filter(isSupportConvo);
+  } catch (e) {
+    console.error('[Starmeet] syncSupportConvos failed:', e?.code, e?.message);
+    throw e;
+  }
+}
+
+/** Admin: real-time listener for support tickets */
+export function subscribeToSupportConvos(onUpdate, onError) {
+  if (!db) return () => {};
+  try {
+    const q = query(
+      collection(db, 'conversations'),
+      where('participants', 'array-contains', SUPPORT_PEER_ID)
+    );
+    return onSnapshot(q, (snap) => {
+      const all = loadAll();
+      snap.docs.forEach(d => {
+        const c = { ...d.data(), id: d.id };
+        const existing = all[c.id];
+        all[c.id] = existing ? mergeConvos(existing, c) : c;
+      });
+      saveAll(all);
+      onUpdate(Object.values(all).filter(isSupportConvo));
+    }, (err) => {
+      console.error('[Starmeet] support convos listener failed:', err?.code, err?.message);
+      onError?.(err);
+      onUpdate(Object.values(loadAll()).filter(isSupportConvo));
+    });
+  } catch (e) {
+    console.error('[Starmeet] subscribeToSupportConvos failed:', e);
+    return () => {};
   }
 }
 

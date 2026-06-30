@@ -13,7 +13,7 @@ import { useFanPosts } from '../context/FanPostContext';
 import {
   loadAll, saveAll, appendMessage, updateConvoStatus, uid as msUid,
   setHumanTakeover, syncAllConvosFromFirestore, subscribeToAllConvos, isAutoReplyEnabled,
-  isSupportConvo,
+  isSupportConvo, syncSupportConvosFromFirestore, subscribeToSupportConvos,
 } from '../services/messageStore';
 import './Admin.css';
 
@@ -1244,26 +1244,61 @@ function AdminMessages({ celebrities }) {
 
 // ─── Admin Support Inbox ──────────────────────────────────────────────────────
 function AdminSupport({ fans }) {
+  const { user } = useAuth();
   const [allConvos, setAllConvos] = useState(() => Object.values(loadAll()).filter(isSupportConvo));
   const [activeConvo, setActive] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [syncing, setSyncing] = useState(true);
+  const [syncError, setSyncError] = useState('');
+
+  function applySupportList(convos) {
+    setAllConvos(convos.filter(isSupportConvo).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)));
+  }
+
+  function refreshSupport() {
+    setSyncing(true);
+    setSyncError('');
+    syncSupportConvosFromFirestore()
+      .then(applySupportList)
+      .catch(e => {
+        setSyncError(
+          e?.code === 'permission-denied'
+            ? 'Permission denied. Sign in to /admin with your admin account and make sure your UID is in the admins collection in Firestore.'
+            : (e?.message || 'Could not load support messages')
+        );
+        applySupportList(Object.values(loadAll()));
+      })
+      .finally(() => setSyncing(false));
+  }
 
   useEffect(() => {
     let cancelled = false;
     setSyncing(true);
-    syncAllConvosFromFirestore().then(convos => {
-      if (!cancelled) {
-        setAllConvos(convos.filter(isSupportConvo).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)));
-        setSyncing(false);
+    setSyncError('');
+    syncSupportConvosFromFirestore()
+      .then(convos => { if (!cancelled) applySupportList(convos); })
+      .catch(e => {
+        if (!cancelled) {
+          setSyncError(
+            e?.code === 'permission-denied'
+              ? 'Permission denied. Use your admin Firebase login and confirm admins/{your-uid} exists in Firestore.'
+              : (e?.message || 'Could not load support messages')
+          );
+          applySupportList(Object.values(loadAll()));
+        }
+      })
+      .finally(() => { if (!cancelled) setSyncing(false); });
+
+    const unsub = subscribeToSupportConvos(
+      convos => { if (!cancelled) { applySupportList(convos); setSyncing(false); } },
+      err => {
+        if (!cancelled) {
+          setSyncError(err?.code === 'permission-denied'
+            ? 'Live sync blocked. Republish firestore.rules and confirm your admin document exists.'
+            : (err?.message || 'Live sync failed'));
+        }
       }
-    });
-    const unsub = subscribeToAllConvos(convos => {
-      if (!cancelled) {
-        setAllConvos(convos.filter(isSupportConvo).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)));
-        setSyncing(false);
-      }
-    });
+    );
     return () => { cancelled = true; unsub(); };
   }, []);
 
@@ -1312,10 +1347,20 @@ function AdminSupport({ fans }) {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 6 }}>Support Inbox</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.5 }}>
-        Fans open Help centre in Settings → you reply here. They see your answer in Messages under Starmeet Support.
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6, flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0 }}>Support Inbox</h1>
+        <button type="button" onClick={refreshSupport} style={{ ...s.btnGhost, fontSize: 12 }}>
+          <RefreshCw size={13} /> Refresh
+        </button>
+      </div>
+      <p style={{ fontSize: 13, color: '#666', marginBottom: 8, lineHeight: 1.5 }}>
+        Fans open Help centre in Settings → you reply here. Signed in as <strong style={{ color: '#aaa' }}>{user?.email || 'unknown'}</strong>.
       </p>
+      {syncError && (
+        <div style={{ background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 13, color: '#e05252' }}>
+          {syncError}
+        </div>
+      )}
       {syncing && <div style={{ fontSize: 12, color: '#555', marginBottom: 12 }}>Syncing…</div>}
       {pending > 0 && (
         <div style={{ ...s.card, marginBottom: 14, borderColor: 'rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)' }}>

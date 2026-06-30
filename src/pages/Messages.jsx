@@ -587,18 +587,19 @@ export default function Messages() {
     return unsub;
   }, [myId]);
 
-  // Handle ?with= param
+  // Handle ?with= param (must re-run when myId becomes available after auth loads)
   useEffect(() => {
     const withParam = searchParams.get('with');
     if (!withParam || !myId) return;
-    const cid = convoId(myId, withParam);
-    const all = loadAll();
-    if (all[cid]) { setActiveId(cid); setShowMobile(true); return; }
 
     if (withParam === SUPPORT_PEER_ID || withParam === 'support') {
       openConvo(supportConvoMeta());
       return;
     }
+
+    const cid = convoId(myId, withParam);
+    const all = loadAll();
+    if (all[cid]) { setActiveId(cid); setShowMobile(true); return; }
 
     const [type, rawId] = withParam.includes('celeb_')
       ? ['celeb', withParam.replace('celeb_','')]
@@ -613,7 +614,7 @@ export default function Messages() {
       if (f) person = { type:'fan', id:f.id, name:f.name||f.username, image:f.avatar, sub:`@${f.username}`, verified:false };
     }
     if (person) openConvo(person);
-  }, [searchParams, celebrities]);
+  }, [searchParams, celebrities, myId, fansDb]);
 
   function refreshConvos() {
     if (myId) setConvos(getConvosForUser(myId));
@@ -634,6 +635,7 @@ export default function Messages() {
       const convo = {
         id: cid, myId, theirId,
         participants: [myId, theirId],
+        isSupport: person.type === 'support',
         with: { ...person },
         status: 'active',
         messages: person.type === 'support' ? [{
@@ -695,6 +697,21 @@ export default function Messages() {
     }
 
     const newMsg = { id: uid(), from:'me', text, media: media || null, timestamp: Date.now() };
+
+    if (convo.with?.type === 'support' && user) {
+      all[cid] = {
+        ...convo,
+        isSupport: true,
+        fanInfo: {
+          id: user.id,
+          name: user.name || user.username,
+          username: user.username,
+          email: user.email,
+        },
+      };
+      saveAll(all);
+    }
+
     appendMessage(cid, newMsg);
     refreshConvos();
 
