@@ -11,7 +11,7 @@ function fmtTime(ts) {
 }
 
 export default function SupportChat() {
-  const { user } = useAuth();
+  const { user, authLoading } = useAuth();
   const [ticket, setTicket] = useState(null);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ export default function SupportChat() {
   const bottomRef = useRef(null);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (authLoading || !user?.id) return;
     let cancelled = false;
 
     (async () => {
@@ -39,7 +39,11 @@ export default function SupportChat() {
     });
 
     return () => { cancelled = true; unsub(); };
-  }, [user?.id]);
+  }, [user?.id, authLoading]);
+
+  useEffect(() => {
+    if (authLoading) setLoading(true);
+  }, [authLoading]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -55,9 +59,13 @@ export default function SupportChat() {
       setTicket(updated);
       setText('');
     } catch (err) {
-      setError(err?.code === 'permission-denied'
-        ? 'Could not send — check you are logged in and Firestore rules are published.'
-        : (err?.message || 'Send failed'));
+      setError(
+        err?.code === 'permission-denied'
+          ? 'Permission denied — republish the full firestore.rules file in Firebase (include support_tickets at the bottom).'
+          : err?.code === 'not-signed-in' || err?.code === 'auth-mismatch'
+            ? err.message
+            : (err?.message || 'Send failed')
+      );
     } finally {
       setSending(false);
     }

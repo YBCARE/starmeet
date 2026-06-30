@@ -1,12 +1,32 @@
 import {
   doc, setDoc, getDoc, getDocs, onSnapshot,
-  collection, query, orderBy,
+  collection, query, orderBy, updateDoc,
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 
 const COL = 'support_tickets';
 
-function uid() {
+function currentUid() {
+  return auth?.currentUser?.uid || null;
+}
+
+function assertSignedIn() {
+  const uid = currentUid();
+  if (!db || !uid) {
+    const err = new Error('Not signed in — log out and sign in again.');
+    err.code = 'not-signed-in';
+    throw err;
+  }
+  return uid;
+}
+
+function firestoreErr(e, fallback) {
+  const err = new Error(e?.message || fallback);
+  if (e?.code) err.code = e.code;
+  return err;
+}
+
+function msgId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
@@ -15,69 +35,87 @@ export function ticketIdForUser(userId) {
 }
 
 export async function getOrCreateTicket(user) {
-  if (!db || !user?.id) throw new Error('Not signed in');
-
-  const id = ticketIdForUser(user.id);
-  const ref = doc(db, COL, id);
-  const snap = await getDoc(ref);
-
-  if (snap.exists()) {
-    return { id, ...snap.data() };
+  const uid = assertSignedIn();
+  const profileId = user?.id || uid;
+  if (profileId !== uid) {
+    const err = new Error('Session mismatch — log out and sign in again.');
+    err.code = 'auth-mismatch';
+    throw err;
   }
 
-  const ticket = {
-    id,
-    userId: user.id,
-    email: user.email || '',
-    name: user.name || user.username || 'Fan',
-    username: user.username || '',
-    messages: [{
-      id: 'welcome',
-      from: 'system',
-      text: 'Hi! Describe your issue and the Starmeet team will reply here.',
-      timestamp: Date.now(),
-    }],
-    status: 'open',
-    updatedAt: Date.now(),
-  };
+  const id = ticketIdForUser(uid);
+  const ref = doc(db, COL, id);
 
-  await setDoc(ref, ticket);
-  return ticket;
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return { id, ...snap.data() };
+    }
+
+    const ticket = {
+      id,
+      userId: uid,
+      email: user?.email || auth.currentUser?.email || '',
+      name: user?.name || user?.username || 'Fan',
+      username: user?.username || '',
+      messages: [{
+        id: 'welcome',
+        from: 'system',
+        text: 'Hi! Describe your issue and the Starmeet team will reply here.',
+        timestamp: Date.now(),
+      }],
+      status: 'open',
+      updatedAt: Date.now(),
+    };
+
+    await setDoc(ref, ticket);
+    return ticket;
+  } catch (e) {
+    throw firestoreErr(e, 'Could not open support chat');
+  }
 }
 
 export async function sendFanMessage(user, text) {
-  if (!db || !user?.id || !text?.trim()) throw new Error('Invalid message');
+  const uid = assertSignedIn();
+  if (!text?.trim()) throw new Error('Invalid message');
 
-  const id = ticketIdForUser(user.id);
+  const id = ticketIdForUser(uid);
   const ref = doc(db, COL, id);
-  let prev = (await getDoc(ref)).data();
 
-  if (!prev) {
-    prev = await getOrCreateTicket(user);
+  try {
+    let prev = (await getDoc(ref)).data();
+    if (!prev) {
+      prev = await getOrCreateTicket(user);
+    }
+
+    const msg = {
+      id: msgId(),
+      from: 'fan',
+      text: text.trim(),
+      timestamp: Date.now(),
+    };
+
+    const messages = [...(prev.messages || []), msg];
+    await updateDoc(ref, {
+      messages,
+      status: 'open',
+      updatedAt: Date.now(),
+      email: user?.email || prev.email || auth.currentUser?.email || '',
+      name: user?.name || user?.username || prev.name || 'Fan',
+      username: user?.username || prev.username || '',
+    });
+
+    return {
+      ...prev,
+      id,
+      userId: uid,
+      messages,
+      status: 'open',
+      updatedAt: Date.now(),
+    };
+  } catch (e) {
+    throw firestoreErr(e, 'Send failed');
   }
-
-  const msg = {
-    id: uid(),
-    from: 'fan',
-    text: text.trim(),
-    timestamp: Date.now(),
-  };
-
-  const messages = [...(prev.messages || []), msg];
-  const ticket = {
-    ...prev,
-    id,
-    userId: user.id,
-    email: user.email || prev.email || '',
-    name: user.name || user.username || prev.name || 'Fan',
-    username: user.username || prev.username || '',
-    messages,
-    status: 'open',
-    updatedAt: Date.now(),
-  };
-
-  await setDoc(ref, ticket);
-  return ticket;
 }
 
 export async function sendAdminReply(ticketId, text) {
@@ -89,7 +127,7 @@ export async function sendAdminReply(ticketId, text) {
 
   const prev = snap.data();
   const msg = {
-    id: uid(),
+    id: msgId(),
     from: 'support',
     text: text.trim(),
     timestamp: Date.now(),
