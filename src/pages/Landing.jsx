@@ -4,7 +4,7 @@ import {
   Search, ArrowRight, Check, Star, Zap, Shield, MessageCircle, ChevronRight,
 } from 'lucide-react';
 import { useCelebContext } from '../context/CelebContext';
-import { pickCategoryCeleb } from '../utils/celebrity';
+import { pickCategoryCeleb, celebPath } from '../utils/celebrity';
 import CelebImage from '../components/CelebImage';
 import Navbar from '../components/Navbar';
 import './Landing.css';
