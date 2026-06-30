@@ -534,3 +534,22 @@
   border-radius: 3px;
   background: #fff;
 }
+
+@media (max-width: 680px) {
+  .feed-inner {
+    padding: 12px 12px calc(20px + var(--sm-bottom-nav-height, 56px));
+  }
+
+  .feed-stories-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .feed-tab {
+    font-size: 12px;
+    padding: 8px 0;
+  }
+
+  .feed-post-actions {
+    padding: 8px 12px;
+  }
+}

@@ -4,6 +4,7 @@ import { Image, Video, MapPin, Tag, X, ChevronLeft, Send } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFanPosts } from '../context/FanPostContext';
 import { useCelebContext } from '../context/CelebContext';
+import './CreatePost.css';
 
 export default function CreatePost() {
   const navigate = useNavigate();
@@ -57,9 +58,8 @@ export default function CreatePost() {
   }
 
   return (
-    <div style={{ background:'#000', minHeight:'100vh', color:'#fff', fontFamily:'Inter,system-ui,sans-serif' }}>
-      {/* Header */}
-      <div style={{ position:'sticky', top:56, zIndex:40, background:'#000', borderBottom:'1px solid #111', padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+    <div className="sm-create-post">
+      <div className="sm-create-post-header">
         <button onClick={() => navigate(-1)} style={{ background:'none', border:'none', color:'#aaa', cursor:'pointer', display:'flex', alignItems:'center', gap:4, fontSize:14, fontFamily:'inherit' }}>
           <ChevronLeft size={18} /> Cancel
         </button>
@@ -74,7 +74,7 @@ export default function CreatePost() {
         </button>
       </div>
 
-      <div style={{ maxWidth:560, margin:'0 auto', padding:'20px 16px 80px' }}>
+      <div className="sm-create-post-body">
 
         {/* User row */}
         <div style={{ display:'flex', gap:12, alignItems:'center', marginBottom:16 }}>

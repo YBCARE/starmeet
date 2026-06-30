@@ -38,14 +38,26 @@ const pv = {
 
 function AnimatedRoutes() {
   const location = useLocation();
-  const noNavbar = ['/', '/login', '/signup', '/onboarding', '/upgrade-success'].includes(location.pathname) ||
-                   location.pathname.startsWith('/admin');
-  const showBottomNav = !noNavbar;
+  const path = location.pathname;
+  const noNavbar = ['/', '/login', '/signup', '/onboarding', '/upgrade-success'].includes(path) ||
+                   path.startsWith('/admin');
+  const hideBottomNav =
+    path === '/support' ||
+    path === '/create-post' ||
+    (path.startsWith('/settings/') && path !== '/settings') ||
+    path.startsWith('/privacy-centre') ||
+    path.startsWith('/legal/');
+  const showBottomNav = !noNavbar && !hideBottomNav;
+  const shellClass = [
+    'sm-app-shell',
+    showBottomNav ? 'sm-has-bottom-nav' : '',
+    !noNavbar && !showBottomNav ? 'sm-no-bottom-nav' : '',
+  ].filter(Boolean).join(' ');
 
   return (
     <>
       {!noNavbar && <Navbar />}
-      <div className={showBottomNav ? 'sm-app-shell sm-has-bottom-nav' : 'sm-app-shell'}>
+      <div className={shellClass}>
         <AnimatePresence mode="wait">
           <motion.div key={location.pathname} variants={pv} initial="initial" animate="animate" exit="exit">
             <Routes location={location}>

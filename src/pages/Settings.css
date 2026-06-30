@@ -5,6 +5,10 @@
   padding-bottom: calc(var(--sm-bottom-nav-height) + 24px);
 }
 
+.sm-no-bottom-nav .sm-settings {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
 .sm-settings-header {
   position: sticky;
   top: var(--sm-nav-height, 56px);

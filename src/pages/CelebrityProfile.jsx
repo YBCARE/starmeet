@@ -8,6 +8,7 @@ import { fetchCelebPhotos, fetchCelebBio, dedupePhotoUrls } from '../services/wi
 import { useMeta } from '../hooks/useMeta';
 import { findCelebrity, celebPath, celebDisplayImage } from '../utils/celebrity';
 import CelebImage from '../components/CelebImage';
+import './CelebrityProfile.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function seeded(seed) {
@@ -295,11 +296,11 @@ export default function CelebrityProfile() {
   }
 
   return (
-    <div style={{ background:'#000', minHeight:'100vh', color:'#fff', fontFamily:'Inter,system-ui,sans-serif' }}>
+    <div className="sm-celeb-profile">
 
       {/* Memorial banner */}
       {isMemorial && (
-        <div style={{ background:'linear-gradient(90deg,#1a1200,#2a1e00)', borderBottom:'1px solid #3a2e00', padding:'14px 20px', display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+        <div className="sm-celeb-profile-banner" style={{ background:'linear-gradient(90deg,#1a1200,#2a1e00)', borderBottom:'1px solid #3a2e00' }}>
           <span style={{ fontSize:22 }}>🕯️</span>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:14, color:'#fbbf24', fontWeight:700 }}>In Memory of {celeb.name}</div>
@@ -310,7 +311,7 @@ export default function CelebrityProfile() {
 
       {/* Guest banner — shown to non-logged-in visitors (non-memorial only) */}
       {!user && !isMemorial && (
-        <div style={{ background:'linear-gradient(90deg,#1e3a5f,#2d1b69)', borderBottom:'1px solid #1a3a6f', padding:'12px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+        <div className="sm-celeb-profile-banner" style={{ background:'linear-gradient(90deg,#1e3a5f,#2d1b69)', borderBottom:'1px solid #1a3a6f', justifyContent:'space-between' }}>
           <div>
             <span style={{ fontSize:14, color:'#93c5fd', fontWeight:600 }}>💬 Message {celeb?.name?.split(' ')[0]} directly</span>
             <span style={{ fontSize:13, color:'#6b9fd4', marginLeft:8 }}>— Join free to start a conversation</span>
@@ -327,17 +328,16 @@ export default function CelebrityProfile() {
       )}
 
       {/* Back bar */}
-      <div style={{ position:'sticky', top: user ? 56 : 0, zIndex:40, background:'#000', borderBottom:'1px solid #111', padding:'10px 14px' }}>
+      <div className="sm-celeb-profile-back">
         <Link to="/explore" style={{ color:'#aaa', textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4, fontSize:14 }}>
           <ChevronLeft size={18} /> Back
         </Link>
       </div>
 
-      <div style={{ maxWidth:680, margin:'0 auto', paddingBottom:60 }}>
+      <div className="sm-celeb-profile-inner">
 
-        {/* Profile header */}
-        <div style={{ padding:'20px 16px 0' }}>
-          <div style={{ display:'flex', gap:16, alignItems:'flex-start', marginBottom:16 }}>
+        <div className="sm-celeb-profile-header">
+          <div className="sm-celeb-profile-top">
             {/* Avatar */}
             <div style={{ position:'relative', flexShrink:0 }}>
               <div style={{ width:90, height:90, borderRadius:'50%', padding:3, background: isMemorial ? 'linear-gradient(135deg,#92400e,#fbbf24)' : 'linear-gradient(135deg,#0095f6,#8b5cf6)' }}>
@@ -362,7 +362,7 @@ export default function CelebrityProfile() {
             <div style={{ flex:1 }}>
               <div style={{ fontSize:18, fontWeight:700, color:'#fff', marginBottom:3 }}>{celeb.name}</div>
               <div style={{ fontSize:12, color:'#0095f6', fontWeight:600, marginBottom:10 }}>{celeb.category}</div>
-              <div style={{ display:'flex', gap:24, marginBottom:14 }}>
+              <div className="sm-celeb-profile-stats">
                 {[
                   { label:'Posts',     val: photosLoading ? '…' : String(uniquePhotos.length || 0), onClick: null },
                   { label:'Followers', val: fmtNum(followerCount + (following ? 1 : 0)), onClick: () => setShowFollowers(true) },
@@ -375,7 +375,7 @@ export default function CelebrityProfile() {
                   </div>
                 ))}
               </div>
-              <div style={{ display:'flex', gap:8 }}>
+              <div className="sm-celeb-profile-actions">
                 <button onClick={() => {
                   const wasFollowing = following;
                   toggleFollow(celeb.id);

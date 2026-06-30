@@ -5,6 +5,7 @@ import { useCelebContext } from '../context/CelebContext';
 import { useAuth } from '../context/AuthContext';
 import { celebPath, celebStableId } from '../utils/celebrity';
 import CelebImage from '../components/CelebImage';
+import './Explore.css';
 
 const CATS = ['All','Actor','Actress','Musician','Director','Movie Producer','Comedian','Model','Athlete','Creator'];
 
@@ -251,26 +252,23 @@ export default function Explore() {
   const isSearching = query.length > 0 || cat !== 'All';
 
   return (
-    <div style={{ background:'#000', minHeight:'100vh', color:'#fff', fontFamily:'Inter,system-ui,sans-serif' }}>
-      <div style={{ maxWidth:1100, margin:'0 auto', padding:'20px 16px 60px' }}>
+    <div className="sm-explore-page">
+      <div className="sm-explore-inner">
 
-        {/* Title */}
-        <div style={{ marginBottom:20 }}>
-          <h1 style={{ fontSize:26, fontWeight:900, color:'#fff', marginBottom:4, letterSpacing:'-0.5px' }}>Explore</h1>
-          <div style={{ fontSize:13, color:'#444' }}>
+        <div className="sm-explore-head" style={{ marginBottom: 20 }}>
+          <h1>Explore</h1>
+          <p>
             {loading ? 'Loading celebrities…' : `${fetched.toLocaleString()} verified celebrities`}
-          </div>
+          </p>
         </div>
 
-        {/* Search + sort row */}
-        <div style={{ display:'flex', gap:10, marginBottom:14 }}>
-          <div style={{ flex:1, display:'flex', alignItems:'center', gap:10, background:'#0d0d0d', border:'1px solid #1a1a1a', borderRadius:12, padding:'11px 16px' }}>
+        <div className="sm-explore-toolbar">
+          <div className="sm-explore-search">
             <Search size={17} color="#555" style={{ flexShrink:0 }} />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search by name, category or bio..."
-              style={{ flex:1, background:'transparent', border:'none', outline:'none', fontSize:14, color:'#fff', fontFamily:'inherit' }}
             />
             {query && (
               <button type="button" onClick={() => setQuery('')}
@@ -305,7 +303,7 @@ export default function Explore() {
         </div>
 
         {/* Category pills with counts */}
-        <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:4, marginBottom:24, scrollbarWidth:'none' }}>
+        <div className="sm-explore-cats">
           {CATS.map(c => {
             const count = c === 'All' ? celebrities.length : (catCounts[c] || 0);
             return (
@@ -357,7 +355,7 @@ export default function Explore() {
 
         {/* Grid */}
         {celebrities.length === 0 ? (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))', gap:12 }}>
+          <div className="sm-explore-grid">
             {[...Array(16)].map((_,i) => (
               <div key={i} style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:14, overflow:'hidden' }}>
                 <div style={{ aspectRatio:'3/4', background:'#111' }} />
@@ -378,7 +376,7 @@ export default function Explore() {
             </button>
           </div>
         ) : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))', gap:12 }}>
+          <div className="sm-explore-grid">
             {filtered.map((c, i) => <CelebCard key={c.id} c={c} index={i} />)}
           </div>
         )}

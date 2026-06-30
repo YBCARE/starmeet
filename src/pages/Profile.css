@@ -156,3 +156,26 @@
   font-size: 13;
   margin-bottom: 20px;
 }
+
+@media (max-width: 680px) {
+  .sm-profile-wrap {
+    padding: 16px 12px calc(20px + var(--sm-bottom-nav-height, 56px));
+  }
+
+  .sm-no-bottom-nav .sm-profile-wrap,
+  .sm-no-bottom-nav .sm-settings {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .sm-profile-stats {
+    gap: 20px;
+  }
+
+  .sm-profile-card {
+    padding: 16px;
+  }
+
+  .sm-profile-name {
+    font-size: 17px;
+  }
+}
