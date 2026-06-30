@@ -27,6 +27,7 @@ import Settings from './pages/Settings';
 import PrivacyCentre from './pages/PrivacyCentre';
 import Policies from './pages/Policies';
 import LegalDoc from './pages/LegalDoc';
+import SupportChat from './pages/SupportChat';
 import MobileBottomNav from './components/MobileBottomNav';
 
 const pv = {
@@ -65,6 +66,7 @@ function AnimatedRoutes() {
 
             <Route path="/feed"          element={<ProtectedRoute><Feed /></ProtectedRoute>} />
             <Route path="/messages"      element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="/support"       element={<ProtectedRoute><SupportChat /></ProtectedRoute>} />
             <Route path="/profile"       element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
             <Route path="/settings"      element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/settings/account"  element={<ProtectedRoute><Settings /></ProtectedRoute>} />

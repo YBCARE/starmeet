@@ -22,7 +22,7 @@ export default function LegalDoc() {
         </section>
       ))}
       <p className="sm-settings-note" style={{ marginTop: 20 }}>
-        Questions? <Link to="/messages?with=support_starmeet">Contact support</Link>
+        Questions? <Link to="/support">Contact support</Link>
       </p>
     </SettingsShell>
   );

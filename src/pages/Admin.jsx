@@ -13,8 +13,10 @@ import { useFanPosts } from '../context/FanPostContext';
 import {
   loadAll, saveAll, appendMessage, updateConvoStatus, uid as msUid,
   setHumanTakeover, syncAllConvosFromFirestore, subscribeToAllConvos, isAutoReplyEnabled,
-  isSupportConvo, syncSupportConvosFromFirestore, subscribeToSupportConvos,
 } from '../services/messageStore';
+import {
+  loadAllTickets, subscribeAllTickets, sendAdminReply, needsReply, lastFanMessage,
+} from '../services/supportStore';
 import './Admin.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1243,30 +1245,26 @@ function AdminMessages({ celebrities }) {
 }
 
 // ─── Admin Support Inbox ──────────────────────────────────────────────────────
-function AdminSupport({ fans }) {
+function AdminSupport() {
   const { user } = useAuth();
-  const [allConvos, setAllConvos] = useState(() => Object.values(loadAll()).filter(isSupportConvo));
-  const [activeConvo, setActive] = useState(null);
+  const [tickets, setTickets] = useState([]);
+  const [active, setActive] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [syncing, setSyncing] = useState(true);
   const [syncError, setSyncError] = useState('');
-
-  function applySupportList(convos) {
-    setAllConvos(convos.filter(isSupportConvo).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)));
-  }
+  const [sending, setSending] = useState(false);
 
   function refreshSupport() {
     setSyncing(true);
     setSyncError('');
-    syncSupportConvosFromFirestore()
-      .then(applySupportList)
+    loadAllTickets()
+      .then(setTickets)
       .catch(e => {
         setSyncError(
           e?.code === 'permission-denied'
-            ? 'Permission denied. Sign in to /admin with your admin account and make sure your UID is in the admins collection in Firestore.'
-            : (e?.message || 'Could not load support messages')
+            ? 'Permission denied. Sign in at /admin with your admin account. Your UID must be in the admins collection.'
+            : (e?.message || 'Could not load support tickets')
         );
-        applySupportList(Object.values(loadAll()));
       })
       .finally(() => setSyncing(false));
   }
@@ -1274,27 +1272,25 @@ function AdminSupport({ fans }) {
   useEffect(() => {
     let cancelled = false;
     setSyncing(true);
-    setSyncError('');
-    syncSupportConvosFromFirestore()
-      .then(convos => { if (!cancelled) applySupportList(convos); })
+    loadAllTickets()
+      .then(t => { if (!cancelled) setTickets(t); })
       .catch(e => {
         if (!cancelled) {
           setSyncError(
             e?.code === 'permission-denied'
-              ? 'Permission denied. Use your admin Firebase login and confirm admins/{your-uid} exists in Firestore.'
-              : (e?.message || 'Could not load support messages')
+              ? 'Permission denied. Confirm admins/{your-uid} exists in Firestore and rules are published.'
+              : (e?.message || 'Could not load support tickets')
           );
-          applySupportList(Object.values(loadAll()));
         }
       })
       .finally(() => { if (!cancelled) setSyncing(false); });
 
-    const unsub = subscribeToSupportConvos(
-      convos => { if (!cancelled) { applySupportList(convos); setSyncing(false); } },
+    const unsub = subscribeAllTickets(
+      t => { if (!cancelled) { setTickets(t); setSyncing(false); } },
       err => {
         if (!cancelled) {
           setSyncError(err?.code === 'permission-denied'
-            ? 'Live sync blocked. Republish firestore.rules and confirm your admin document exists.'
+            ? 'Live sync blocked — republish firestore.rules (include support_tickets).'
             : (err?.message || 'Live sync failed'));
         }
       }
@@ -1303,47 +1299,27 @@ function AdminSupport({ fans }) {
   }, []);
 
   useEffect(() => {
-    if (!activeConvo) return;
-    const fresh = allConvos.find(c => c.id === activeConvo.id);
+    if (!active) return;
+    const fresh = tickets.find(t => t.id === active.id);
     if (fresh) setActive(fresh);
-  }, [allConvos, activeConvo?.id]);
+  }, [tickets, active?.id]);
 
-  function fanLabel(c) {
-    if (c.fanInfo?.name) return c.fanInfo.name;
-    if (c.fanInfo?.username) return `@${c.fanInfo.username}`;
-    const fanId = c.myId?.replace(/^user_/, '');
-    const fan = fans.find(f => f.id === fanId);
-    if (fan) return fan.name || fan.username || 'Fan';
-    return c.myId || 'Fan';
+  async function sendReply() {
+    if (!active || !replyText.trim() || sending) return;
+    setSending(true);
+    setSyncError('');
+    try {
+      const updated = await sendAdminReply(active.id, replyText);
+      setReplyText('');
+      setActive({ ...active, ...updated });
+    } catch (e) {
+      setSyncError(e?.message || 'Could not send reply');
+    } finally {
+      setSending(false);
+    }
   }
 
-  function fanEmail(c) {
-    return c.fanInfo?.email || fans.find(f => f.id === c.myId?.replace(/^user_/, ''))?.email || '';
-  }
-
-  function lastPreview(c) {
-    const msgs = c.messages || [];
-    const last = msgs[msgs.length - 1];
-    if (!last) return 'No messages yet';
-    if (last.from === 'system') return last.text;
-    return last.from === 'me' ? `Fan: ${last.text}` : `You: ${last.text}`;
-  }
-
-  function needsReply(c) {
-    const msgs = c.messages || [];
-    const last = msgs[msgs.length - 1];
-    return last && last.from === 'me';
-  }
-
-  function sendReply() {
-    if (!activeConvo || !replyText.trim()) return;
-    const msg = { id: msUid(), from: 'them', text: replyText.trim(), timestamp: Date.now() };
-    const updated = appendMessage(activeConvo.id, msg);
-    setReplyText('');
-    if (updated) setActive(updated);
-  }
-
-  const pending = allConvos.filter(needsReply).length;
+  const pending = tickets.filter(needsReply).length;
 
   return (
     <div>
@@ -1354,7 +1330,7 @@ function AdminSupport({ fans }) {
         </button>
       </div>
       <p style={{ fontSize: 13, color: '#666', marginBottom: 8, lineHeight: 1.5 }}>
-        Fans open Help centre in Settings → you reply here. Signed in as <strong style={{ color: '#aaa' }}>{user?.email || 'unknown'}</strong>.
+        Fans use <strong style={{ color: '#aaa' }}>Settings → Help centre</strong>. Tickets save to Firestore <code style={{ color: '#888' }}>support_tickets</code>. Signed in as {user?.email || 'unknown'}.
       </p>
       {syncError && (
         <div style={{ background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 13, color: '#e05252' }}>
@@ -1368,56 +1344,56 @@ function AdminSupport({ fans }) {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: activeConvo ? '280px 1fr' : '1fr', gap: 14, minHeight: 480 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: active ? '280px 1fr' : '1fr', gap: 14, minHeight: 480 }}>
         <div style={{ ...s.card, padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid #111', fontSize: 12, fontWeight: 700, color: '#888' }}>
-            Help requests ({allConvos.length})
+            Help requests ({tickets.length})
           </div>
           <div style={{ maxHeight: 520, overflowY: 'auto' }}>
-            {allConvos.length === 0 ? (
+            {tickets.length === 0 ? (
               <div style={{ padding: 24, textAlign: 'center', color: '#555', fontSize: 13 }}>
-                No support messages yet.
+                No support tickets yet. Ask a fan to open Settings → Help centre and send a message.
               </div>
-            ) : allConvos.map(c => (
+            ) : tickets.map(t => (
               <button
-                key={c.id}
+                key={t.id}
                 type="button"
-                onClick={() => setActive(c)}
+                onClick={() => setActive(t)}
                 style={{
-                  width: '100%', textAlign: 'left', background: activeConvo?.id === c.id ? '#111' : 'transparent',
+                  width: '100%', textAlign: 'left', background: active?.id === t.id ? '#111' : 'transparent',
                   border: 'none', borderBottom: '1px solid #111', padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{fanLabel(c)}</span>
-                  {needsReply(c) && (
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{t.name || t.username || 'Fan'}</span>
+                  {needsReply(t) && (
                     <span style={{ fontSize: 10, fontWeight: 800, color: '#fbbf24', background: 'rgba(245,158,11,0.15)', borderRadius: 999, padding: '2px 8px' }}>
                       NEW
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>{fanEmail(c) || 'No email'}</div>
-                <div style={{ fontSize: 12, color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lastPreview(c)}</div>
-                <div style={{ fontSize: 10, color: '#444', marginTop: 4 }}>{fmtTime(c.updatedAt)}</div>
+                <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>{t.email || 'No email'}</div>
+                <div style={{ fontSize: 12, color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lastFanMessage(t) || 'No messages'}</div>
+                <div style={{ fontSize: 10, color: '#444', marginTop: 4 }}>{fmtTime(t.updatedAt)}</div>
               </button>
             ))}
           </div>
         </div>
 
-        {activeConvo && (
+        {active && (
           <div style={{ ...s.card, padding: 0, display: 'flex', flexDirection: 'column', minHeight: 480 }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid #111' }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{fanLabel(activeConvo)}</div>
-              <div style={{ fontSize: 12, color: '#555' }}>{fanEmail(activeConvo)}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{active.name || active.username}</div>
+              <div style={{ fontSize: 12, color: '#555' }}>{active.email}</div>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {(activeConvo.messages || []).map(msg => (
-                <div key={msg.id} style={{ display: 'flex', justifyContent: msg.from === 'me' ? 'flex-end' : msg.from === 'system' ? 'center' : 'flex-start' }}>
+              {(active.messages || []).map(msg => (
+                <div key={msg.id} style={{ display: 'flex', justifyContent: msg.from === 'fan' ? 'flex-end' : msg.from === 'system' ? 'center' : 'flex-start' }}>
                   {msg.from === 'system' ? (
                     <div style={{ background: '#1a1a1a', border: '1px solid #222', borderRadius: 8, padding: '6px 12px', fontSize: 11, color: '#666' }}>{msg.text}</div>
                   ) : (
-                    <div style={{ background: msg.from === 'me' ? '#1a3a5c' : '#14532d', borderRadius: 10, padding: '8px 12px', maxWidth: '78%' }}>
-                      <div style={{ fontSize: 10, color: '#888', marginBottom: 2 }}>{msg.from === 'me' ? 'Fan' : 'Starmeet Support'}</div>
+                    <div style={{ background: msg.from === 'fan' ? '#1a3a5c' : '#14532d', borderRadius: 10, padding: '8px 12px', maxWidth: '78%' }}>
+                      <div style={{ fontSize: 10, color: '#888', marginBottom: 2 }}>{msg.from === 'fan' ? 'Fan' : 'Starmeet Support'}</div>
                       <div style={{ fontSize: 13, color: '#fff', lineHeight: 1.5 }}>{msg.text}</div>
                       <div style={{ fontSize: 10, color: '#666', textAlign: 'right', marginTop: 2 }}>{fmtTime(msg.timestamp)}</div>
                     </div>
@@ -1435,8 +1411,8 @@ function AdminSupport({ fans }) {
                   onKeyDown={e => { if (e.key === 'Enter') sendReply(); }}
                   style={{ ...s.input, marginBottom: 0, flex: 1 }}
                 />
-                <button type="button" onClick={sendReply} style={s.btn('#10b981')}>
-                  <Send size={13} /> Send
+                <button type="button" onClick={sendReply} disabled={sending} style={s.btn('#10b981')}>
+                  <Send size={13} /> {sending ? '…' : 'Send'}
                 </button>
               </div>
             </div>
@@ -1479,7 +1455,7 @@ export default function Admin() {
         {section==='videos'      && <VideoManager celebrities={celebrities} updateCeleb={updateCeleb} overrides={overrides} />}
         {section==='fans'        && <FanManager />}
         {section==='messages'    && <AdminMessages celebrities={allCelebs} />}
-        {section==='support'     && <AdminSupport fans={fansDb} />}
+        {section==='support'     && <AdminSupport />}
         {section==='settings'    && <SiteSettings settings={settings} updateSettings={updateSettings} />}
       </main>
     </div>

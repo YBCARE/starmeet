@@ -64,7 +64,7 @@ function SettingsHub() {
       </SettingsSection>
 
       <SettingsSection label="Support & about">
-        <SettingsRow icon={HelpCircle} label="Help centre" to="/messages?with=support_starmeet" />
+            <SettingsRow icon={HelpCircle} label="Help centre" to="/support" />
         <SettingsRow icon={FileText} label="Terms and policies" to="/policies" />
       </SettingsSection>
 

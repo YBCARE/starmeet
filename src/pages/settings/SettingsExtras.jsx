@@ -166,7 +166,7 @@ export function SettingsData() {
 
   function requestDelete() {
     if (!window.confirm('Request account deletion? You will be taken to Support to confirm.')) return;
-    navigate('/messages?with=support_starmeet');
+    navigate('/support');
   }
 
   return (
