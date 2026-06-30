@@ -188,3 +188,354 @@
   .sm-admin-sidebar-foot { display: none; }
   .sm-admin-main { padding: 16px 14px 24px; }
 }
+
+/* ── Admin Support Inbox ─────────────────────────────────────────────────── */
+.sm-admin-support {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sm-admin-support-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.sm-admin-support-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  min-width: 0;
+}
+
+.sm-admin-support-refresh {
+  flex-shrink: 0;
+  font-size: 12px !important;
+}
+
+.sm-admin-support-intro {
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.sm-admin-support-intro strong { color: #aaa; }
+
+.sm-admin-support-error {
+  background: rgba(224, 82, 82, 0.1);
+  border: 1px solid rgba(224, 82, 82, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #e05252;
+}
+
+.sm-admin-support-syncing {
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 12px;
+}
+
+.sm-admin-support-pending {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.sm-admin-support-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  min-width: 0;
+}
+
+.sm-admin-support-list,
+.sm-admin-support-chat {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 12px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.sm-admin-support-list-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid #111;
+  font-size: 12px;
+  font-weight: 700;
+  color: #888;
+}
+
+.sm-admin-support-list-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.sm-admin-support-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sm-admin-support-ticket {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #111;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+}
+
+.sm-admin-support-ticket.active { background: #111; }
+
+.sm-admin-support-ticket-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sm-admin-support-ticket-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-admin-support-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.15);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.sm-admin-support-ticket-email {
+  font-size: 11px;
+  color: #555;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-admin-support-ticket-preview {
+  font-size: 12px;
+  color: #777;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-admin-support-ticket-time {
+  font-size: 10px;
+  color: #444;
+  margin-top: 4px;
+}
+
+.sm-admin-support-chat {
+  display: flex;
+  flex-direction: column;
+  min-height: 480px;
+}
+
+.sm-admin-support-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #111;
+  flex-shrink: 0;
+}
+
+.sm-admin-support-back {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sm-admin-support-chat-user { min-width: 0; }
+
+.sm-admin-support-chat-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-admin-support-chat-email {
+  font-size: 12px;
+  color: #555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-admin-support-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.sm-admin-support-msg {
+  display: flex;
+}
+
+.sm-admin-support-msg-fan { justify-content: flex-end; }
+.sm-admin-support-msg-support { justify-content: flex-start; }
+.sm-admin-support-msg-system { justify-content: center; }
+
+.sm-admin-support-msg-system > .sm-admin-support-msg-system,
+.sm-admin-support-msg.sm-admin-support-msg-system > div {
+  background: #1a1a1a;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: #666;
+  max-width: 92%;
+  text-align: center;
+}
+
+.sm-admin-support-bubble {
+  border-radius: 10px;
+  padding: 8px 12px;
+  max-width: 85%;
+}
+
+.sm-admin-support-msg-fan .sm-admin-support-bubble {
+  background: #1a3a5c;
+}
+
+.sm-admin-support-msg-support .sm-admin-support-bubble {
+  background: #14532d;
+}
+
+.sm-admin-support-bubble-label {
+  font-size: 10px;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.sm-admin-support-bubble-text {
+  font-size: 13px;
+  color: #fff;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.sm-admin-support-bubble-time {
+  font-size: 10px;
+  color: #666;
+  text-align: right;
+  margin-top: 2px;
+}
+
+.sm-admin-support-compose {
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #111;
+  background: #0a0a0a;
+  flex-shrink: 0;
+}
+
+.sm-admin-support-compose-label {
+  font-size: 11px;
+  color: #10b981;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.sm-admin-support-compose-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sm-admin-support-input {
+  flex: 1;
+  min-width: 0;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+  font-family: inherit;
+}
+
+.sm-admin-support-send {
+  flex-shrink: 0;
+}
+
+@media (min-width: 901px) {
+  .sm-admin-support-grid.has-chat {
+    grid-template-columns: 280px 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .sm-admin-support-top {
+    flex-wrap: wrap;
+  }
+
+  .sm-admin-support-intro {
+    font-size: 12px;
+  }
+
+  .sm-admin-support-grid.has-chat .sm-admin-support-list.is-hidden-mobile {
+    display: none;
+  }
+
+  .sm-admin-support-back {
+    display: inline-flex;
+  }
+
+  .sm-admin-support-chat {
+    min-height: calc(100dvh - 220px);
+    max-height: calc(100dvh - 220px);
+  }
+
+  .sm-admin-support-list-scroll {
+    max-height: none;
+  }
+
+  .sm-admin-main {
+    padding: 12px 10px calc(16px + env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden;
+  }
+}

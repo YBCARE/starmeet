@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Star, Film, MessageCircle, Heart,
   Video, Settings, LogOut, Search, Plus, Trash2, Edit2, Check,
-  ToggleLeft, ToggleRight, ChevronRight, X, Upload, Eye, EyeOff,
+  ToggleLeft, ToggleRight, ChevronRight, ChevronLeft, X, Upload, Eye, EyeOff,
   Save, RefreshCw, AlertTriangle, BarChart2, Shield, Send, HelpCircle,
 } from 'lucide-react';
 import { useCelebContext } from '../context/CelebContext';
@@ -1322,36 +1322,34 @@ function AdminSupport() {
   const pending = tickets.filter(needsReply).length;
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0 }}>Support Inbox</h1>
-        <button type="button" onClick={refreshSupport} style={{ ...s.btnGhost, fontSize: 12 }}>
+    <div className="sm-admin-support">
+      <div className="sm-admin-support-top">
+        <h1 className="sm-admin-support-title">Support Inbox</h1>
+        <button type="button" onClick={refreshSupport} className="sm-admin-support-refresh" style={s.btnGhost}>
           <RefreshCw size={13} /> Refresh
         </button>
       </div>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 8, lineHeight: 1.5 }}>
-        Fans use <strong style={{ color: '#aaa' }}>Settings → Help centre</strong>. Tickets save to Firestore <code style={{ color: '#888' }}>support_tickets</code>. Signed in as {user?.email || 'unknown'}.
+      <p className="sm-admin-support-intro">
+        Fans use <strong>Settings → Help centre</strong>. Signed in as {user?.email || 'unknown'}.
       </p>
       {syncError && (
-        <div style={{ background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 13, color: '#e05252' }}>
-          {syncError}
-        </div>
+        <div className="sm-admin-support-error">{syncError}</div>
       )}
-      {syncing && <div style={{ fontSize: 12, color: '#555', marginBottom: 12 }}>Syncing…</div>}
+      {syncing && <div className="sm-admin-support-syncing">Syncing…</div>}
       {pending > 0 && (
-        <div style={{ ...s.card, marginBottom: 14, borderColor: 'rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24' }}>{pending} ticket{pending === 1 ? '' : 's'} waiting for a reply</div>
+        <div className="sm-admin-support-pending">
+          {pending} ticket{pending === 1 ? '' : 's'} waiting for a reply
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: active ? '280px 1fr' : '1fr', gap: 14, minHeight: 480 }}>
-        <div style={{ ...s.card, padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid #111', fontSize: 12, fontWeight: 700, color: '#888' }}>
+      <div className={`sm-admin-support-grid${active ? ' has-chat' : ''}`}>
+        <div className={`sm-admin-support-list${active ? ' is-hidden-mobile' : ''}`}>
+          <div className="sm-admin-support-list-head">
             Help requests ({tickets.length})
           </div>
-          <div style={{ maxHeight: 520, overflowY: 'auto' }}>
+          <div className="sm-admin-support-list-scroll">
             {tickets.length === 0 ? (
-              <div style={{ padding: 24, textAlign: 'center', color: '#555', fontSize: 13 }}>
+              <div className="sm-admin-support-empty">
                 No support tickets yet. Ask a fan to open Settings → Help centre and send a message.
               </div>
             ) : tickets.map(t => (
@@ -1359,59 +1357,67 @@ function AdminSupport() {
                 key={t.id}
                 type="button"
                 onClick={() => setActive(t)}
-                style={{
-                  width: '100%', textAlign: 'left', background: active?.id === t.id ? '#111' : 'transparent',
-                  border: 'none', borderBottom: '1px solid #111', padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit',
-                }}
+                className={`sm-admin-support-ticket${active?.id === t.id ? ' active' : ''}`}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{t.name || t.username || 'Fan'}</span>
-                  {needsReply(t) && (
-                    <span style={{ fontSize: 10, fontWeight: 800, color: '#fbbf24', background: 'rgba(245,158,11,0.15)', borderRadius: 999, padding: '2px 8px' }}>
-                      NEW
-                    </span>
-                  )}
+                <div className="sm-admin-support-ticket-top">
+                  <span className="sm-admin-support-ticket-name">{t.name || t.username || 'Fan'}</span>
+                  {needsReply(t) && <span className="sm-admin-support-badge">NEW</span>}
                 </div>
-                <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>{t.email || 'No email'}</div>
-                <div style={{ fontSize: 12, color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lastFanMessage(t) || 'No messages'}</div>
-                <div style={{ fontSize: 10, color: '#444', marginTop: 4 }}>{fmtTime(t.updatedAt)}</div>
+                <div className="sm-admin-support-ticket-email">{t.email || 'No email'}</div>
+                <div className="sm-admin-support-ticket-preview">{lastFanMessage(t) || 'No messages'}</div>
+                <div className="sm-admin-support-ticket-time">{fmtTime(t.updatedAt)}</div>
               </button>
             ))}
           </div>
         </div>
 
         {active && (
-          <div style={{ ...s.card, padding: 0, display: 'flex', flexDirection: 'column', minHeight: 480 }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid #111' }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{active.name || active.username}</div>
-              <div style={{ fontSize: 12, color: '#555' }}>{active.email}</div>
+          <div className="sm-admin-support-chat">
+            <div className="sm-admin-support-chat-head">
+              <button
+                type="button"
+                className="sm-admin-support-back"
+                onClick={() => setActive(null)}
+                aria-label="Back to tickets"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <div className="sm-admin-support-chat-user">
+                <div className="sm-admin-support-chat-name">{active.name || active.username}</div>
+                <div className="sm-admin-support-chat-email">{active.email}</div>
+              </div>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="sm-admin-support-messages">
               {(active.messages || []).map(msg => (
-                <div key={msg.id} style={{ display: 'flex', justifyContent: msg.from === 'fan' ? 'flex-end' : msg.from === 'system' ? 'center' : 'flex-start' }}>
+                <div
+                  key={msg.id}
+                  className={`sm-admin-support-msg sm-admin-support-msg-${msg.from}`}
+                >
                   {msg.from === 'system' ? (
-                    <div style={{ background: '#1a1a1a', border: '1px solid #222', borderRadius: 8, padding: '6px 12px', fontSize: 11, color: '#666' }}>{msg.text}</div>
+                    <div className="sm-admin-support-msg-system">{msg.text}</div>
                   ) : (
-                    <div style={{ background: msg.from === 'fan' ? '#1a3a5c' : '#14532d', borderRadius: 10, padding: '8px 12px', maxWidth: '78%' }}>
-                      <div style={{ fontSize: 10, color: '#888', marginBottom: 2 }}>{msg.from === 'fan' ? 'Fan' : 'Starmeet Support'}</div>
-                      <div style={{ fontSize: 13, color: '#fff', lineHeight: 1.5 }}>{msg.text}</div>
-                      <div style={{ fontSize: 10, color: '#666', textAlign: 'right', marginTop: 2 }}>{fmtTime(msg.timestamp)}</div>
+                    <div className="sm-admin-support-bubble">
+                      <div className="sm-admin-support-bubble-label">
+                        {msg.from === 'fan' ? 'Fan' : 'Starmeet Support'}
+                      </div>
+                      <div className="sm-admin-support-bubble-text">{msg.text}</div>
+                      <div className="sm-admin-support-bubble-time">{fmtTime(msg.timestamp)}</div>
                     </div>
                   )}
                 </div>
               ))}
             </div>
-            <div style={{ padding: '10px 14px', borderTop: '1px solid #111' }}>
-              <div style={{ fontSize: 11, color: '#10b981', fontWeight: 600, marginBottom: 6 }}>Reply as Starmeet Support</div>
-              <div style={{ display: 'flex', gap: 8 }}>
+            <div className="sm-admin-support-compose">
+              <div className="sm-admin-support-compose-label">Reply as Starmeet Support</div>
+              <div className="sm-admin-support-compose-row">
                 <input
                   value={replyText}
                   onChange={e => setReplyText(e.target.value)}
                   placeholder="Type your reply…"
                   onKeyDown={e => { if (e.key === 'Enter') sendReply(); }}
-                  style={{ ...s.input, marginBottom: 0, flex: 1 }}
+                  className="sm-admin-support-input"
                 />
-                <button type="button" onClick={sendReply} disabled={sending} style={s.btn('#10b981')}>
+                <button type="button" onClick={sendReply} disabled={sending} className="sm-admin-support-send" style={s.btn('#10b981')}>
                   <Send size={13} /> {sending ? '…' : 'Send'}
                 </button>
               </div>
