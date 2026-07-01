@@ -358,8 +358,8 @@ export default function CelebrityProfile() {
               )}
             </div>
 
-            {/* Stats */}
-            <div style={{ flex:1 }}>
+            {/* Name + stats */}
+            <div className="sm-celeb-profile-info">
               <div style={{ fontSize:18, fontWeight:700, color:'#fff', marginBottom:3 }}>{celeb.name}</div>
               <div style={{ fontSize:12, color:'#0095f6', fontWeight:600, marginBottom:10 }}>{celeb.category}</div>
               <div className="sm-celeb-profile-stats">
@@ -374,55 +374,6 @@ export default function CelebrityProfile() {
                     <div style={{ fontSize:11, color:'#555' }}>{s.label}</div>
                   </div>
                 ))}
-              </div>
-              <div className="sm-celeb-profile-actions">
-                <button onClick={() => {
-                  const wasFollowing = following;
-                  toggleFollow(celeb.id);
-                  if (!wasFollowing && !isMemorial) {
-                    setFollowPrompt(true);
-                    setTimeout(() => setFollowPrompt(false), 8000);
-                  }
-                }} style={{
-                  flex:1, padding:'9px 0', border:'none', borderRadius:8,
-                  background: following ? '#1a1a1a' : (isMemorial ? '#92400e' : '#0095f6'),
-                  color: following ? '#aaa' : '#fff',
-                  fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-                  outline: following ? '1px solid #333' : 'none',
-                  transition:'all 0.15s',
-                }}>
-                  {following ? 'Following ✓' : (isMemorial ? '🕯️ Follow Memory' : 'Follow')}
-                </button>
-
-                {/* Message button — hidden for memorial accounts */}
-                {!isMemorial && (
-                  <button onClick={() => navigate(`/messages?with=celeb_${celeb.id}`)}
-                    style={{ flex:1, padding:'9px 0', border:'1px solid #333', borderRadius:8, background:'transparent', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                    Message
-                  </button>
-                )}
-
-                {/* Leave Tribute button — only for memorial */}
-                {isMemorial && (
-                  <button onClick={() => setTab('tributes')}
-                    style={{ flex:1, padding:'9px 0', border:'1px solid #92400e', borderRadius:8, background:'transparent', color:'#fbbf24', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                    Leave a Tribute
-                  </button>
-                )}
-
-                {/* Share button */}
-                <button onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href).catch(() => {});
-                  setShareCopied(true);
-                  setTimeout(() => setShareCopied(false), 2000);
-                }} style={{
-                  width:38, padding:'9px 0', border:'1px solid #333', borderRadius:8,
-                  background:'transparent', color: shareCopied ? '#22c55e' : '#666',
-                  fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-                  transition:'color 0.15s', flexShrink:0,
-                }} title="Copy link">
-                  <Share2 size={15} />
-                </button>
               </div>
 
               {/* Post-follow CTA (non-memorial only) */}
@@ -449,6 +400,45 @@ export default function CelebrityProfile() {
             </div>
           </div>
 
+          <div className="sm-celeb-profile-actions">
+                <button type="button"
+                  className={`sm-celeb-profile-btn sm-celeb-profile-btn-primary${following ? ' is-following' : ''}${isMemorial && !following ? ' is-memorial' : ''}`}
+                  onClick={() => {
+                  const wasFollowing = following;
+                  toggleFollow(celeb.id);
+                  if (!wasFollowing && !isMemorial) {
+                    setFollowPrompt(true);
+                    setTimeout(() => setFollowPrompt(false), 8000);
+                  }
+                }}>
+                  {following ? 'Following ✓' : (isMemorial ? '🕯️ Follow Memory' : 'Follow')}
+                </button>
+
+                {!isMemorial && (
+                  <button type="button" className="sm-celeb-profile-btn sm-celeb-profile-btn-secondary"
+                    onClick={() => navigate(`/messages?with=celeb_${celeb.id}`)}>
+                    Message
+                  </button>
+                )}
+
+                {isMemorial && (
+                  <button type="button" className="sm-celeb-profile-btn sm-celeb-profile-btn-secondary is-memorial"
+                    onClick={() => setTab('tributes')}>
+                    Leave a Tribute
+                  </button>
+                )}
+
+                <button type="button"
+                  className={`sm-celeb-profile-btn sm-celeb-profile-btn-share${shareCopied ? ' is-copied' : ''}`}
+                  onClick={() => {
+                  navigator.clipboard?.writeText(window.location.href).catch(() => {});
+                  setShareCopied(true);
+                  setTimeout(() => setShareCopied(false), 2000);
+                }} title="Copy link">
+                  <Share2 size={15} />
+                </button>
+          </div>
+
           {/* Short bio under header — use Wikipedia text if loaded, else celeb.bio */}
           {(wikiBio || celeb.bio) && (
             <p style={{ fontSize:13, color:'#999', lineHeight:1.6, marginBottom:14, paddingBottom:14, borderBottom:'1px solid #111' }}>
@@ -460,12 +450,12 @@ export default function CelebrityProfile() {
           )}
 
           {/* Followers preview strip */}
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
-            <div style={{ display:'flex' }}>
+          <div className="sm-celeb-profile-followers">
+            <div className="sm-celeb-profile-follower-avatars">
               {fakeFans.slice(0, 6).map((fan, i) => (
                 <Link key={fan.id} to={`/fan/${fan.id}`}>
-                  <img src={fan.avatar} alt={fan.username}
-                    style={{ width:24, height:24, borderRadius:'50%', border:'2px solid #000', marginLeft: i > 0 ? -8 : 0, objectFit:'cover' }}
+                  <img src={fan.avatar} alt={fan.username} className="sm-celeb-profile-follower-avatar"
+                    style={{ marginLeft: i > 0 ? -8 : 0 }}
                   />
                 </Link>
               ))}
