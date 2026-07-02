@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Star, Film, MessageCircle, Heart,
   Video, Settings, LogOut, Search, Plus, Trash2, Edit2, Check,
   ToggleLeft, ToggleRight, ChevronRight, ChevronLeft, X, Upload, Eye, EyeOff,
-  Save, RefreshCw, AlertTriangle, BarChart2, Shield, Send, HelpCircle,
+  Save, RefreshCw, AlertTriangle, BarChart2, Shield, Send, HelpCircle, Camera,
 } from 'lucide-react';
 import { useCelebContext } from '../context/CelebContext';
 import { useAdmin } from '../context/AdminContext';
@@ -17,6 +17,9 @@ import {
 import {
   loadAllTickets, subscribeAllTickets, sendAdminReply, needsReply, lastFanMessage,
 } from '../services/supportStore';
+import {
+  subscribeStories, createCelebStory, deleteStory,
+} from '../services/storyStore';
 import './Admin.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -133,6 +136,7 @@ const NAV = [
   { key:'dashboard',   label:'Dashboard',   icon:LayoutDashboard },
   { key:'celebrities', label:'Celebrities', icon:Star },
   { key:'posts',       label:'Posts',       icon:Film },
+  { key:'stories',     label:'Stories',     icon:Camera },
   { key:'likes',       label:'Likes',       icon:Heart },
   { key:'comments',    label:'Comments',    icon:MessageCircle },
   { key:'videos',      label:'Videos',      icon:Video },
@@ -1244,6 +1248,155 @@ function AdminMessages({ celebrities }) {
   );
 }
 
+// ─── Admin Stories ───────────────────────────────────────────────────────────
+function AdminStories({ celebrities }) {
+  const [stories, setStories] = useState([]);
+  const [search, setSearch] = useState('');
+  const [selectedCeleb, setSelectedCeleb] = useState('');
+  const [caption, setCaption] = useState('');
+  const [media, setMedia] = useState(null);
+  const [mediaType, setMediaType] = useState('image');
+  const [posting, setPosting] = useState(false);
+  const [err, setErr] = useState('');
+  const fileRef = useRef(null);
+
+  useEffect(() => {
+    const unsub = subscribeStories(setStories);
+    return unsub;
+  }, []);
+
+  const filteredCelebs = useMemo(() => {
+    const q = search.toLowerCase();
+    return celebrities
+      .filter(c => !q || c.name?.toLowerCase().includes(q) || String(c.id).includes(q))
+      .slice(0, 80);
+  }, [celebrities, search]);
+
+  const celebStories = useMemo(
+    () => stories.filter(s => s.type === 'celeb').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+    [stories]
+  );
+
+  function readFile(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const type = f.type.startsWith('video') ? 'video' : 'image';
+    setMediaType(type);
+    const r = new FileReader();
+    r.onload = ev => setMedia(ev.target.result);
+    r.readAsDataURL(f);
+  }
+
+  async function postStory(e) {
+    e.preventDefault();
+    setErr('');
+    const celeb = celebrities.find(c => String(c.id) === String(selectedCeleb));
+    if (!celeb) { setErr('Select a celebrity'); return; }
+    if (!media) { setErr('Upload a photo or video'); return; }
+    setPosting(true);
+    try {
+      await createCelebStory(celeb, { media, mediaType, caption });
+      setCaption('');
+      setMedia(null);
+      setSelectedCeleb('');
+    } catch (ex) {
+      setErr(ex?.message || 'Could not post story');
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  async function removeStory(id) {
+    if (!confirm('Delete this story?')) return;
+    try {
+      await deleteStory(id);
+    } catch (ex) {
+      setErr(ex?.message || 'Could not delete');
+    }
+  }
+
+  return (
+    <div>
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 8 }}>Stories</h1>
+      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
+        Post 24-hour stories for celebrities. Fans see them at the top of Feed.
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14, marginBottom: 24 }}>
+        <form onSubmit={postStory} style={{ ...s.card, gridColumn: '1 / -1', maxWidth: 560 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 14 }}>Post celebrity story</h3>
+          {err && (
+            <div style={{ background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 13, color: '#e05252' }}>
+              {err}
+            </div>
+          )}
+
+          <label style={s.label}>Search celebrity</label>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name…" style={{ ...s.input, marginBottom: 10 }} />
+
+          <label style={s.label}>Celebrity</label>
+          <select value={selectedCeleb} onChange={e => setSelectedCeleb(e.target.value)} style={{ ...s.input, marginBottom: 10, colorScheme: 'dark' }}>
+            <option value="">Select celebrity…</option>
+            {filteredCelebs.map(c => (
+              <option key={c.id} value={c.id}>{c.name} ({c.category})</option>
+            ))}
+          </select>
+
+          <label style={s.label}>Caption (optional)</label>
+          <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="On set today 🎬" style={{ ...s.input, marginBottom: 10 }} />
+
+          <label style={s.label}>Photo or video</label>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
+            {media && (
+              mediaType === 'video'
+                ? <video src={media} controls style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8 }} />
+                : <img src={media} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8 }} />
+            )}
+            <button type="button" onClick={() => fileRef.current?.click()} style={s.btnGhost}>
+              <Upload size={14} /> Upload
+            </button>
+            <input ref={fileRef} type="file" accept="image/*,video/*" hidden onChange={readFile} />
+          </div>
+
+          <button type="submit" disabled={posting} style={s.btn()}>
+            <Camera size={14} /> {posting ? 'Posting…' : 'Post story'}
+          </button>
+        </form>
+      </div>
+
+      <h3 style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 12 }}>
+        Active celebrity stories ({celebStories.length})
+      </h3>
+
+      {celebStories.length === 0 ? (
+        <div style={{ ...s.card, textAlign: 'center', color: '#555', fontSize: 13 }}>
+          No celebrity stories yet. Post one above — it shows on Feed for 24 hours.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+          {celebStories.map(st => (
+            <div key={st.id} style={{ ...s.card, padding: 12 }}>
+              {st.mediaType === 'video' ? (
+                <video src={st.mediaUrl} style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 8, marginBottom: 10 }} />
+              ) : (
+                <img src={st.mediaUrl} alt="" style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 8, marginBottom: 10 }} />
+              )}
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{st.authorName}</div>
+              {st.caption && <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>{st.caption}</div>}
+              <div style={{ fontSize: 10, color: '#555', marginBottom: 10 }}>
+                Expires {new Date(st.expiresAt).toLocaleString()}
+              </div>
+              <button type="button" onClick={() => removeStory(st.id)} style={{ ...s.btnGhost, color: '#e05252', width: '100%', justifyContent: 'center' }}>
+                <Trash2 size={13} /> Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Admin Support Inbox ──────────────────────────────────────────────────────
 function AdminSupport() {
   const { user } = useAuth();
@@ -1456,6 +1609,7 @@ export default function Admin() {
         {section==='dashboard'   && <Dashboard celebrities={allCelebs} fans={fansDb} fanPosts={fanPosts} adminPosts={adminPosts} overrides={overrides} />}
         {section==='celebrities' && <CelebrityManagement celebrities={celebrities} overrides={overrides} addedCelebs={addedCelebs} updateCeleb={updateCeleb} deleteCeleb={deleteCeleb} addCeleb={addCeleb} />}
         {section==='posts'       && <PostManagement celebrities={allCelebs} adminPosts={adminPosts} addAdminPost={addAdminPost} updatePost={updatePost} deletePost={deletePost} postOvr={postOvr} />}
+        {section==='stories'     && <AdminStories celebrities={allCelebs} />}
         {section==='likes'       && <LikesManager adminPosts={adminPosts} updatePost={updatePost} postOvr={postOvr} updateSettings={updateSettings} settings={settings} />}
         {section==='comments'    && <CommentsManager />}
         {section==='videos'      && <VideoManager celebrities={celebrities} updateCeleb={updateCeleb} overrides={overrides} />}

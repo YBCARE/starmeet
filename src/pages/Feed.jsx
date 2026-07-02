@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Heart, MessageCircle, Share2, Bookmark, Check, Play, Send, X,
-         Volume2, VolumeX, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
+         Volume2, VolumeX, Pause, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCelebContext } from '../context/CelebContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +8,8 @@ import { useFanPosts } from '../context/FanPostContext';
 import { getSomeFans } from '../services/fakeFans';
 import { useMeta } from '../hooks/useMeta';
 import { celebPath } from '../utils/celebrity';
+import { groupStories, subscribeStories, getOwnStoryGroup } from '../services/storyStore';
+import CreateStoryModal from '../components/CreateStoryModal';
 import './Feed.css';
 
 // ─── Priority celebrities shown first ────────────────────────────────────────
@@ -311,173 +313,201 @@ function genBatch(celebrities, start, count, priorityFirst) {
   return Array.from({ length: count }, (_, i) => generatePost(celebrities, start + i, priorityFirst));
 }
 
-// ─── Story Viewer ─────────────────────────────────────────────────────────────
-function StoryViewer({ stories, startIndex, onClose }) {
-  const [idx,      setIdx]      = useState(startIndex);
+// ─── Story Viewer (real stories from Firestore) ─────────────────────────────
+function StoryViewer({ groups, startGroupIndex, onClose }) {
+  const [groupIdx, setGroupIdx] = useState(startGroupIndex);
+  const [slideIdx, setSlideIdx] = useState(0);
   const [progress, setProgress] = useState(0);
   const timerRef = useRef(null);
   const DURATION = 5000;
 
-  const current = stories[idx];
-  const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=111&color=aaa&size=400`;
-  const cat     = current?.category || 'default';
-  const captions = STORY_CAPTIONS[cat] || STORY_CAPTIONS.default;
-  const caption  = captions[idx % captions.length];
+  const group = groups[groupIdx];
+  const slide = group?.slides?.[slideIdx];
+  const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n || 'User')}&background=111&color=aaa&size=400`;
+
+  function goNext() {
+    if (slideIdx < (group?.slides?.length || 0) - 1) {
+      setSlideIdx(i => i + 1);
+    } else if (groupIdx < groups.length - 1) {
+      setGroupIdx(i => i + 1);
+      setSlideIdx(0);
+    } else {
+      onClose();
+    }
+  }
+
+  function goPrev() {
+    if (slideIdx > 0) setSlideIdx(i => i - 1);
+    else if (groupIdx > 0) {
+      const prev = groups[groupIdx - 1];
+      setGroupIdx(i => i - 1);
+      setSlideIdx(Math.max(0, (prev?.slides?.length || 1) - 1));
+    }
+  }
 
   useEffect(() => {
+    if (!slide) return undefined;
     setProgress(0);
     clearInterval(timerRef.current);
     const start = Date.now();
     timerRef.current = setInterval(() => {
-      const elapsed = Date.now() - start;
-      const pct = Math.min((elapsed / DURATION) * 100, 100);
+      const pct = Math.min(((Date.now() - start) / DURATION) * 100, 100);
       setProgress(pct);
       if (pct >= 100) {
         clearInterval(timerRef.current);
-        if (idx < stories.length - 1) setIdx(i => i + 1);
-        else onClose();
+        goNext();
       }
     }, 50);
     return () => clearInterval(timerRef.current);
-  }, [idx]);
+  }, [groupIdx, slideIdx, slide?.id]);
 
-  function prev() { if (idx > 0) setIdx(i => i - 1); }
-  function next() { if (idx < stories.length - 1) setIdx(i => i + 1); else onClose(); }
+  if (!group || !slide) return null;
+
+  const totalBars = group.slides.length;
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'#000', zIndex:3000, display:'flex', flexDirection:'column' }}
+    <div className="feed-story-viewer"
       onClick={e => {
         const rect = e.currentTarget.getBoundingClientRect();
-        e.clientX < rect.width / 2 ? prev() : next();
+        e.clientX < rect.width / 2 ? goPrev() : goNext();
       }}>
 
-      {/* Progress bars */}
-      <div style={{ display:'flex', gap:3, padding:'12px 12px 0', flexShrink:0, zIndex:10 }}>
-        {stories.map((_, i) => (
-          <div key={i} style={{ flex:1, height:2.5, borderRadius:3, background:'rgba(255,255,255,0.25)', overflow:'hidden' }}>
-            <div style={{
-              height:'100%', borderRadius:3, background:'#fff',
-              width: i < idx ? '100%' : i === idx ? `${progress}%` : '0%',
-              transition: i === idx ? 'none' : 'none',
+      <div className="feed-story-progress-row">
+        {group.slides.map((_, i) => (
+          <div key={i} className="feed-story-progress-bar">
+            <div className="feed-story-progress-fill" style={{
+              width: i < slideIdx ? '100%' : i === slideIdx ? `${progress}%` : '0%',
             }} />
           </div>
         ))}
       </div>
 
-      {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', zIndex:10, flexShrink:0 }}>
         <div style={{ width:38, height:38, borderRadius:'50%', overflow:'hidden', border:'2px solid #fff', flexShrink:0 }}>
-          <img src={current?.image || av(current?.name)} alt=""
+          <img src={group.avatar || av(group.name)} alt=""
             style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top' }}
-            onError={e=>{e.currentTarget.src=av(current?.name)}} />
+            onError={e => { e.currentTarget.src = av(group.name); }} />
         </div>
         <div style={{ flex:1 }}>
           <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-            <span style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{current?.name}</span>
-            <div style={{ width:14, height:14, borderRadius:'50%', background:'#3b82f6', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <Check size={7} strokeWidth={3.5} color="white" />
-            </div>
+            <span style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{group.name}</span>
+            {group.type === 'celeb' && (
+              <div style={{ width:14, height:14, borderRadius:'50%', background:'#3b82f6', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <Check size={7} strokeWidth={3.5} color="white" />
+              </div>
+            )}
           </div>
-          <div style={{ fontSize:11, color:'rgba(255,255,255,0.6)' }}>Just now</div>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,0.6)' }}>
+            {new Date(slide.createdAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
+            {totalBars > 1 ? ` · ${slideIdx + 1}/${totalBars}` : ''}
+          </div>
         </div>
-        <button onClick={e=>{e.stopPropagation(); onClose();}}
+        <button type="button" onClick={e => { e.stopPropagation(); onClose(); }}
           style={{ background:'none', border:'none', color:'#fff', cursor:'pointer', lineHeight:0, padding:8 }}>
           <X size={22} />
         </button>
       </div>
 
-      {/* Story image — full screen portrait */}
-      <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
-        <img src={postImageFor(current, idx + 1)} alt=""
-          style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top center', display:'block' }}
-          onError={e=>{e.currentTarget.src=av(current?.name)}} />
-        {/* Vignette */}
+      <div style={{ flex:1, position:'relative', overflow:'hidden', background:'#000' }}>
+        {slide.mediaType === 'video' ? (
+          <video src={slide.mediaUrl} autoPlay playsInline muted loop
+            style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center' }} />
+        ) : (
+          <img src={slide.mediaUrl} alt=""
+            style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center' }}
+            onError={e => { e.currentTarget.src = av(group.name); }} />
+        )}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7) 100%)' }} />
-
-        {/* Caption overlay */}
-        <div style={{ position:'absolute', bottom:80, left:0, right:0, padding:'0 20px', textAlign:'center' }}>
-          <div style={{ display:'inline-block', background:'rgba(0,0,0,0.55)', backdropFilter:'blur(8px)', borderRadius:12, padding:'8px 18px', maxWidth:280 }}>
-            <span style={{ fontSize:15, color:'#fff', fontWeight:600 }}>{caption}</span>
+        {slide.caption && (
+          <div style={{ position:'absolute', bottom:80, left:0, right:0, padding:'0 20px', textAlign:'center' }}>
+            <div style={{ display:'inline-block', background:'rgba(0,0,0,0.55)', backdropFilter:'blur(8px)', borderRadius:12, padding:'8px 18px', maxWidth:280 }}>
+              <span style={{ fontSize:15, color:'#fff', fontWeight:600 }}>{slide.caption}</span>
+            </div>
           </div>
-        </div>
-
-        {/* Navigation arrows — visible on desktop */}
-        {idx > 0 && (
-          <button onClick={e=>{e.stopPropagation(); prev();}}
-            style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', background:'rgba(255,255,255,0.15)', backdropFilter:'blur(4px)', border:'none', borderRadius:'50%', width:38, height:38, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <ChevronLeft size={20} color="#fff" />
-          </button>
         )}
-        {idx < stories.length - 1 && (
-          <button onClick={e=>{e.stopPropagation(); next();}}
-            style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'rgba(255,255,255,0.15)', backdropFilter:'blur(4px)', border:'none', borderRadius:'50%', width:38, height:38, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <ChevronRight size={20} color="#fff" />
-          </button>
-        )}
-      </div>
-
-      {/* Bottom send bar */}
-      <div style={{ padding:'12px 16px 20px', flexShrink:0, display:'flex', gap:10, alignItems:'center' }}
-        onClick={e => e.stopPropagation()}>
-        <div style={{ flex:1, background:'rgba(255,255,255,0.1)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:999, padding:'10px 16px', fontSize:13, color:'rgba(255,255,255,0.7)' }}>
-          Reply to {current?.name?.split(' ')[0]}...
-        </div>
-        <button style={{ background:'none', border:'none', cursor:'pointer', padding:6, color:'#fff' }}>❤️</button>
-        <button style={{ background:'none', border:'none', cursor:'pointer', padding:6 }}>
-          <Share2 size={22} color="#fff" />
-        </button>
       </div>
     </div>
   );
 }
 
 // ─── Stories Row ─────────────────────────────────────────────────────────────
-function StoriesRow({ celebrities }) {
-  const stories  = useMemo(() => {
-    const daySeed = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
-    return shuffleCelebs(celebrities, daySeed).slice(0, 80);
-  }, [celebrities]);
-  const [viewing, setViewing] = useState(null); // index into stories
-  const [seen,    setSeen]    = useState(() => {
+function StoriesRow({ user }) {
+  const [rawStories, setRawStories] = useState([]);
+  const [viewing, setViewing] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [seen, setSeen] = useState(() => {
     try { return JSON.parse(localStorage.getItem('sm_stories_seen')) || {}; } catch { return {}; }
   });
-  const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=111&color=aaa&size=120`;
+
+  useEffect(() => {
+    const unsub = subscribeStories(setRawStories);
+    return unsub;
+  }, []);
+
+  const groups = useMemo(() => groupStories(rawStories, user?.id), [rawStories, user?.id]);
+  const ownGroup = getOwnStoryGroup(groups, user?.id);
+  const av = n => `https://ui-avatars.com/api/?name=${encodeURIComponent(n || 'You')}&background=111&color=aaa&size=120`;
 
   function openStory(idx) {
     setSeen(s => {
-      const next = { ...s, [idx]: true };
+      const next = { ...s, [groups[idx]?.id]: true };
       try { localStorage.setItem('sm_stories_seen', JSON.stringify(next)); } catch {}
       return next;
     });
     setViewing(idx);
   }
 
+  function openOwnStory() {
+    const idx = groups.findIndex(g => g.isOwn);
+    if (idx >= 0) openStory(idx);
+    else setShowCreate(true);
+  }
+
   return (
     <>
       <div className="feed-stories">
         <div className="feed-stories-scroll">
-          {stories.map((c, i) => (
-            <div key={c.id} onClick={() => openStory(i)} className="feed-story">
-              <div className={`feed-story-ring ${seen[i] ? 'seen' : 'unseen'}`}>
+          {user && (
+            <div className="feed-story feed-story-yours">
+              <div className={`feed-story-ring ${ownGroup && !seen[ownGroup.id] ? 'unseen' : 'seen'}`} onClick={openOwnStory}>
                 <div className="feed-story-inner">
-                  <img src={c.image} alt={c.name}
-                    onError={e => { e.currentTarget.src = av(c.name); }} />
+                  <img src={user.avatar || av(user.name || 'You')} alt="Your story"
+                    onError={e => { e.currentTarget.src = av(user.name); }} />
                 </div>
+                <button type="button" className="feed-story-add-btn" aria-label="Add story"
+                  onClick={e => { e.stopPropagation(); setShowCreate(true); }}>
+                  <Plus size={14} strokeWidth={3} />
+                </button>
               </div>
-              <span className={`feed-story-name ${seen[i] ? 'seen' : 'unseen'}`}>
-                {c.name.split(' ')[0]}
-              </span>
+              <span className={`feed-story-name ${ownGroup ? 'unseen' : 'seen'}`}>Your story</span>
             </div>
-          ))}
+          )}
+
+          {groups.filter(g => !g.isOwn).map(g => {
+            const idx = groups.findIndex(x => x.id === g.id);
+            return (
+              <div key={g.id} onClick={() => openStory(idx)} className="feed-story">
+                <div className={`feed-story-ring ${seen[g.id] ? 'seen' : 'unseen'}`}>
+                  <div className="feed-story-inner">
+                    <img src={g.avatar || av(g.name)} alt={g.name}
+                      onError={e => { e.currentTarget.src = av(g.name); }} />
+                  </div>
+                </div>
+                <span className={`feed-story-name ${seen[g.id] ? 'seen' : 'unseen'}`}>
+                  {g.name.split(' ')[0]}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {viewing !== null && (
-        <StoryViewer
-          stories={stories}
-          startIndex={viewing}
-          onClose={() => setViewing(null)}
-        />
+      {viewing !== null && groups[viewing] && (
+        <StoryViewer groups={groups} startGroupIndex={viewing} onClose={() => setViewing(null)} />
+      )}
+
+      {showCreate && user && (
+        <CreateStoryModal user={user} onClose={() => setShowCreate(false)} />
       )}
     </>
   );
@@ -869,7 +899,7 @@ export default function Feed() {
           ))}
         </div>
 
-        <StoriesRow celebrities={celebrities} />
+        <StoriesRow user={user} />
 
         {feedTab === 'following' && celebFollows.length === 0 && (
           <div className="feed-empty">

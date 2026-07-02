@@ -1,0 +1,138 @@
+.sm-create-story-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.sm-create-story-modal {
+  width: 100%;
+  max-width: 420px;
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.sm-create-story-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #111;
+}
+
+.sm-create-story-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.sm-create-story-head button {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+}
+
+.sm-create-story-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sm-create-story-error {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  font-size: 13px;
+}
+
+.sm-create-story-upload {
+  width: 100%;
+  min-height: 220px;
+  border: 2px dashed #333;
+  border-radius: 12px;
+  background: #111;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: inherit;
+  overflow: hidden;
+}
+
+.sm-create-story-preview {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  display: block;
+}
+
+.sm-create-story-caption {
+  width: 100%;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: #fff;
+  font-size: 16px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.sm-create-story-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #888;
+}
+
+.sm-create-story-user img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.sm-create-story-submit {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  background: #0095f6;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sm-create-story-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sm-create-story-note {
+  margin: 0;
+  text-align: center;
+  font-size: 11px;
+  color: #555;
+}
